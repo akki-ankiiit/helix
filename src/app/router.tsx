@@ -3,6 +3,7 @@ import { lazy } from "react";
 import { Login, ForgotPassword } from "../features/auth/Login";
 import { RequireSession } from "./guards/RequireSession";
 import { Shell } from "../components/layout/Shell";
+import { NotFound } from "./NotFound";
 const Intake = lazy(() =>
   import("../features/intake/Intake").then((m) => ({ default: m.Intake })),
 );
@@ -86,5 +87,5 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: "*", element: <Navigate to="/" replace /> },
+  { path: "*", element: <NotFound /> },
 ]);
