@@ -1,0 +1,37 @@
+{
+  "name": "helix-materials",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/vite.mjs --host 0.0.0.0",
+    "build": "tsc -b && node scripts/vite.mjs build",
+    "preview": "node scripts/vite.mjs preview --host 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test.mjs",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@fontsource/dm-sans": "^5.2.6",
+    "@hookform/resolvers": "^5.2.2",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.62.0",
+    "react-router-dom": "^7.9.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "zod": "^4.1.5",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "prettier": "^3.9.9",
+    "typescript": "~5.7.2",
+    "vite": "^6.1.0",
+    "vitest": "^3.2.4"
+  }
+}

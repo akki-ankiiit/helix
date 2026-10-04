@@ -1,0 +1,406 @@
+.header {
+  margin-bottom: 24px;
+}
+.code {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.titleRow h1 {
+  font-size: 26px;
+}
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 13px;
+  flex-wrap: wrap;
+}
+.brief {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  margin-bottom: 23px;
+  position: sticky;
+  top: 83px;
+  z-index: 20;
+  box-shadow: var(--shadow);
+}
+.briefToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: 0;
+  width: 100%;
+  padding: 16px 20px;
+  font-size: 12px;
+}
+.briefContent {
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border);
+}
+.briefContent p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 15px;
+}
+.pipeline {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 10px;
+  margin-bottom: 24px;
+  overflow: auto;
+  padding: 6px;
+}
+.pipeline button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  font-size: 11px;
+  padding: 13px 12px;
+  color: var(--muted);
+  border-radius: 6px;
+}
+.pipeline button.current {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.pipeline button.completed {
+  color: var(--green);
+}
+.stage {
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  margin-bottom: 13px;
+  overflow: hidden;
+}
+.stageHead {
+  width: 100%;
+  background: none;
+  border: 0;
+  text-align: left;
+  padding: 19px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+.stageHead h2 {
+  font-size: 15px;
+}
+.stageHead small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.stageIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--secondary);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+.stageOpen .stageIcon {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.stageBody {
+  border-top: 1px solid var(--border);
+  padding: 24px;
+}
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 25px 0 16px;
+}
+.sequence {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 22px;
+  background: var(--secondary);
+  border-radius: 9px;
+  overflow: auto;
+}
+.sequence span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.sequence .litActive {
+  color: var(--accent);
+}
+.source {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.source h3 {
+  font-size: 13px;
+}
+.source p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 10px 0;
+}
+.source blockquote {
+  margin: 14px 0;
+  padding: 10px 15px;
+  border-left: 2px solid var(--accent);
+  background: var(--secondary);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.pathway {
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  position: relative;
+  min-width: 0;
+}
+.pathway.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 20%, var(--surface));
+}
+.pathway h3 {
+  font-size: 16px;
+  line-height: 1.5;
+  margin-top: 18px;
+}
+.pathway p {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+.pathway ul {
+  padding: 0;
+  list-style: none;
+  margin: 18px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+}
+.scoreRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 10px 0;
+}
+.scoreRow b {
+  color: var(--text);
+  font-weight: 500;
+}
+.pathway footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+.pathway .price {
+  font-size: 24px;
+  font-weight: 500;
+  margin-top: 20px;
+}
+.price small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.trialHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20px 0;
+  gap: 20px;
+}
+.protocol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin-top: 26px;
+}
+.protocol section {
+  padding: 20px;
+  background: var(--secondary);
+  border-radius: 8px;
+}
+.protocol h3 {
+  margin-bottom: 12px;
+}
+.protocol p,
+.protocol li {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.protocol ol {
+  padding-left: 17px;
+}
+.reading {
+  width: 65px !important;
+  margin-right: 5px;
+}
+.evaluation {
+  display: flex;
+  gap: 12px;
+  margin: 22px 0;
+}
+.evaluation > div {
+  flex: 1;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.evaluation small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.evaluation strong {
+  font-size: 25px;
+  font-weight: 500;
+  display: block;
+  margin-top: 9px;
+}
+.proposal {
+  padding: 24px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  border-radius: 10px;
+  margin-top: 26px;
+  background: color-mix(in srgb, var(--accent-soft) 25%, var(--surface));
+}
+.proposal h3 {
+  font-size: 16px;
+}
+.proposal p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+.approval {
+  padding: 22px;
+  background: var(--secondary);
+  border-radius: 9px;
+  margin-top: 20px;
+}
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 20px 0;
+}
+.event {
+  display: flex;
+  gap: 15px;
+  padding: 0 0 22px;
+  font-size: 12px;
+  position: relative;
+}
+.event::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+.event:last-child::before {
+  display: none;
+}
+.eventDot {
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--surface);
+  margin-top: 4px;
+  z-index: 1;
+  flex-shrink: 0;
+}
+.event small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.comment {
+  padding: 15px 0;
+  border-top: 1px solid var(--border);
+}
+.comment p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.comment small {
+  font-size: 11px;
+  color: var(--muted);
+}
+@media (max-width: 1050px) {
+  .titleRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .protocol {
+    grid-template-columns: 1fr;
+  }
+  .stageBody {
+    padding: 19px;
+  }
+  .pipeline button {
+    padding: 12px 10px;
+  }
+}
+@media (max-width: 650px) {
+  .brief {
+    position: static;
+  }
+  .evaluation {
+    flex-wrap: wrap;
+  }
+  .evaluation > div {
+    min-width: 40%;
+  }
+  .trialHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .sequence {
+    padding: 15px;
+  }
+  .stageHead {
+    padding: 15px;
+  }
+  .stageHead small {
+    max-width: 190px;
+  }
+}

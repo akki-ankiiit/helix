@@ -1,0 +1,488 @@
+import type {
+  Benchmark,
+  Brief,
+  Pathway,
+  Project,
+  RawMaterial,
+  Source,
+} from "../../domain/models";
+import { defaultTargets } from "../property-library";
+export const blankBrief = (): Brief => ({
+  name: "",
+  description: "",
+  categoryId: "",
+  subcategoryId: "",
+  useCase: {
+    environment: "Exterior",
+    surface: "Wall",
+    substrate: "Concrete",
+    climate: "Temperate",
+    temperatureMin: "5",
+    temperatureMax: "35",
+    method: "Trowel",
+  },
+  benchmarkIds: [],
+  targets: [],
+  objectives: [],
+  constraints: {
+    cost: "",
+    currency: "USD",
+    budget: "Mid",
+    required: "",
+    excluded: "",
+    supplier: "",
+    equipment: "",
+    compliance: "",
+    site: "",
+    notes: "",
+    preference: "",
+  },
+});
+export const initialMaterials: RawMaterial[] = [
+  {
+    id: "cement",
+    name: "Portland cement",
+    function: "Mineral binder",
+    grade: "CEM I · fixture",
+    supplier: "Demo Mineral Supply",
+    price: 0.16,
+    min: 20,
+    max: 45,
+  },
+  {
+    id: "sand",
+    name: "Graded silica sand",
+    function: "Aggregate",
+    grade: "0.1–0.6 mm",
+    supplier: "Demo Mineral Supply",
+    price: 0.05,
+    min: 40,
+    max: 75,
+  },
+  {
+    id: "polymer",
+    name: "Redispersible polymer",
+    function: "Adhesion modifier",
+    grade: "VAE · illustrative",
+    supplier: "Demo Polymer Co.",
+    price: 2.8,
+    min: 0,
+    max: 8,
+  },
+  {
+    id: "cellulose",
+    name: "Cellulose ether",
+    function: "Water retention",
+    grade: "Modified HPMC",
+    supplier: "Demo Additives",
+    price: 5.2,
+    min: 0,
+    max: 1,
+  },
+  {
+    id: "filler",
+    name: "Limestone filler",
+    function: "Packing / workability",
+    grade: "Fine ground",
+    supplier: "Demo Mineral Supply",
+    price: 0.07,
+    min: 0,
+    max: 20,
+  },
+  {
+    id: "starch",
+    name: "Starch ether",
+    function: "Rheology modifier",
+    grade: "Modified starch",
+    supplier: "Demo Additives",
+    price: 4.1,
+    min: 0,
+    max: 0.5,
+  },
+].map((m) => ({
+  ...m,
+  currency: "USD",
+  priceDate: "2026-09-15",
+  stock: "Available",
+  approved: true,
+  sds: "Supplier SDS required before laboratory use",
+  alternatives: [],
+}));
+export const initialBenchmarks: Benchmark[] = [
+  {
+    id: "bm-1",
+    name: "Reference A · exterior adhesive",
+    manufacturer: "Illustrative benchmark",
+    version: "Demo TDS v1",
+    date: "2026-09-01",
+    provenance: "TDS",
+    values: { "tensile-adhesion-initial": 1.2, slip: 0.4, "open-time": 30 },
+    notes:
+      "Fictional fixture. Source-reported claims; not measured or verified.",
+  },
+  {
+    id: "bm-2",
+    name: "Reference B · flexible coating",
+    manufacturer: "Illustrative benchmark",
+    version: "Internal fixture v2",
+    date: "2026-09-12",
+    provenance: "Lab-tested",
+    values: {
+      "water-absorption": 4.2,
+      "crack-bridging": 0.85,
+      "pull-off-bond": 0.9,
+    },
+    notes: "Illustrative laboratory record, not an actual tested product.",
+  },
+  {
+    id: "bm-3",
+    name: "Reference C · water reducer",
+    manufacturer: "Illustrative benchmark",
+    version: "Demo TDS v1",
+    date: "2026-09-08",
+    provenance: "TDS",
+    values: { flow: 220, "setting-time": 110, "compressive-strength": 45 },
+    notes: "Fictional fixture. No competitor performance claim.",
+  },
+];
+export const fixtureSources: Source[] = [
+  {
+    id: "s-1",
+    title: "Polymer-modified adhesive: internal research note",
+    type: "Technical data sheet",
+    owner: "Helix demo library",
+    date: "2026-09-08",
+    summary:
+      "Illustrates a method for comparing polymer level, bond strength, and application behavior.",
+    excerpt:
+      "In this illustrative dataset, increased polymer content accompanies improved initial adhesion. This is an example, not a causal or validated result.",
+    quality: "Illustrative fixture · no external scientific verification",
+    reference: "HELIX-FIXTURE-001",
+    pinned: true,
+    excluded: false,
+  },
+  {
+    id: "s-2",
+    title: "Fresh-state rheology: experiment planning sheet",
+    type: "Supplier sheet",
+    owner: "Helix demo library",
+    date: "2026-09-10",
+    summary:
+      "Outlines variables to hold constant when comparing fresh-state slip measurements.",
+    excerpt:
+      "Control application water, substrate conditioning, and mixing history across each comparison.",
+    quality: "Illustrative planning guidance · qualified R&D review required",
+    reference: "HELIX-FIXTURE-002",
+    pinned: false,
+    excluded: false,
+  },
+  {
+    id: "s-3",
+    title: "Evidence gaps and next experiments",
+    type: "User-uploaded document",
+    owner: "Demo R&D team",
+    date: "2026-09-15",
+    summary:
+      "Lists missing aged adhesion tests and flags insufficient evidence for durability claims.",
+    excerpt:
+      "The fixture has no water-aged, heat-aged, or freeze-thaw results. Do not infer a certified classification.",
+    quality: "Low confidence · incomplete evidence",
+    reference: "HELIX-FIXTURE-003",
+    pinned: false,
+    excluded: false,
+  },
+];
+export const fixturePathways: Pathway[] = [
+  {
+    id: "p-1",
+    name: "Balanced polymer-modified",
+    rationale:
+      "Balance initial adhesion and application workability, with a controlled rheology experiment.",
+    cost: 0.21,
+    scores: [84, 78, 92, 85],
+    equipment: "Dry powder mixer, calibrated balance, test rig",
+    risk: "Cement alkalinity; respirable dust. Obtain supplier SDS.",
+    ranges: [
+      "Cement 30–38%",
+      "Mineral aggregate / filler 57–65%",
+      "Polymer 3–5%",
+      "Rheology additives 0.3–0.7%",
+    ],
+    predictions: {
+      "tensile-adhesion-initial": 1.2,
+      slip: 0.45,
+      "open-time": 32,
+      "water-demand": 24,
+    },
+    citations: ["s-1", "s-2"],
+    version: 1,
+  },
+  {
+    id: "p-2",
+    name: "Higher polymer reserve",
+    rationale:
+      "Explore additional bond-strength margin with a higher raw-material cost.",
+    cost: 0.26,
+    scores: [90, 62, 86, 80],
+    equipment: "Dry powder mixer, calibrated balance, test rig",
+    risk: "Dust handling; higher polymer demand. Durability evidence missing.",
+    ranges: [
+      "Cement 30–38%",
+      "Mineral aggregate / filler 55–63%",
+      "Polymer 5–7%",
+      "Rheology additives 0.3–0.7%",
+    ],
+    predictions: {
+      "tensile-adhesion-initial": 1.4,
+      slip: 0.5,
+      "open-time": 34,
+      "water-demand": 25,
+    },
+    citations: ["s-1"],
+    version: 1,
+  },
+  {
+    id: "p-3",
+    name: "Cost-conscious mineral blend",
+    rationale:
+      "Investigate a leaner polymer dosage where raw-material cost is the priority.",
+    cost: 0.17,
+    scores: [68, 94, 94, 78],
+    equipment: "Dry powder mixer, calibrated balance",
+    risk: "Lower estimated adhesion margin; laboratory validation essential.",
+    ranges: [
+      "Cement 32–40%",
+      "Mineral aggregate / filler 58–65%",
+      "Polymer 2–3%",
+      "Rheology additives 0.3–0.7%",
+    ],
+    predictions: {
+      "tensile-adhesion-initial": 0.95,
+      slip: 0.55,
+      "open-time": 28,
+      "water-demand": 24,
+    },
+    citations: ["s-1", "s-3"],
+    version: 1,
+  },
+];
+export function seedProjects(): Project[] {
+  const brief: Brief = {
+    ...blankBrief(),
+    name: "Exterior large-format tile adhesive",
+    description: "A reliable bond for demanding exterior applications.",
+    categoryId: "tile",
+    subcategoryId: "tile-0",
+    useCase: {
+      ...blankBrief().useCase,
+      material: "Porcelain",
+      dimensions: "600 × 1200 mm",
+      speed: "Standard set",
+      traffic: "Light pedestrian",
+      grout: "24 h",
+      reopen: "48 h",
+      notes: "Vertical application with extended working time.",
+    },
+    benchmarkIds: ["bm-1"],
+    targets: defaultTargets("tile-0"),
+    objectives: ["slip", "tensile-adhesion-initial", "open-time"],
+    constraints: {
+      ...blankBrief().constraints,
+      cost: "0.30",
+      equipment: "Dry powder mixer",
+      preference: "Prefer locally available minerals",
+    },
+  };
+  const targets = brief.targets;
+  const trial1 = {
+    id: "trial-1",
+    name: "T01 · baseline",
+    version: 1,
+    percentages: {
+      cement: 35,
+      sand: 56,
+      polymer: 4,
+      cellulose: 0.4,
+      filler: 4.5,
+      starch: 0.1,
+    },
+    batchKg: 5,
+    water: 24,
+    basis: "Dry blend" as const,
+    locked: true,
+  };
+  const trial2 = {
+    ...trial1,
+    id: "trial-2",
+    name: "T02 · rheology iteration",
+    version: 2,
+    parentId: "trial-1",
+    percentages: {
+      ...trial1.percentages,
+      cellulose: 0.5,
+      filler: 4.38,
+      starch: 0.12,
+    },
+    locked: false,
+  };
+  const readings: Record<string, number[][]> = {
+    "tensile-adhesion-initial": [
+      [1.12, 1.16, 1.14],
+      [1.18, 1.22, 1.2],
+    ],
+    slip: [
+      [0.66, 0.7, 0.68],
+      [0.36, 0.4, 0.38],
+    ],
+    "open-time": [
+      [31, 32, 33],
+      [32, 33, 34],
+    ],
+    "water-demand": [
+      [24, 24, 24],
+      [24, 24, 24],
+    ],
+  };
+  const p: Project = {
+    id: "helix-001",
+    brief,
+    revisions: [
+      {
+        version: 1,
+        brief: structuredClone(brief),
+        date: "2026-09-18",
+        reason: "Initial formulation brief",
+      },
+    ],
+    owner: "Alex Morgan",
+    updated: "2026-10-02",
+    stage: "Final",
+    status: "In review",
+    sources: structuredClone(fixtureSources),
+    pathways: structuredClone(fixturePathways),
+    selectedPathway: "p-1",
+    trials: [trial1, trial2],
+    testPlan: targets.map((t) => ({
+      propertyId: t.propertyId,
+      required: true,
+      specimens: 3,
+      ageDays: t.unit === "MPa" ? 28 : 0,
+      condition: t.condition,
+    })),
+    results: targets.flatMap((t) =>
+      [trial1, trial2].map((trial, i) => ({
+        id: `${trial.id}-${t.propertyId}`,
+        trialId: trial.id,
+        propertyId: t.propertyId,
+        readings: readings[t.propertyId][i],
+        unit: t.unit,
+        method: t.method,
+        condition: t.condition,
+        date: "2026-10-01",
+        operator: "Jamie Chen · demo",
+        failureMode: "Recorded in fixture",
+        comments:
+          "Illustrative measured-result fixture, not real laboratory data.",
+        attachments: [],
+        reviewed: false,
+      })),
+    ),
+    approvals: [
+      {
+        id: "a-1",
+        action: "Submitted for review",
+        actor: "Alex Morgan",
+        date: "2026-10-02",
+        recipeId: "trial-2",
+        note: "Slip failure in T01 addressed by illustrative T02 iteration.",
+      },
+    ],
+    comments: [
+      {
+        id: "c-1",
+        text: "T01 exceeded the slip target. T02 retains the original evidence and is ready for results review.",
+        author: "Jamie Chen",
+        date: "2026-10-02",
+      },
+    ],
+    activity: [
+      {
+        id: "e-1",
+        text: "T02 submitted for technical review",
+        date: "2026-10-02",
+      },
+      {
+        id: "e-2",
+        text: "Iteration accepted after T01 slip failure",
+        date: "2026-09-28",
+      },
+      {
+        id: "e-3",
+        text: "Brief v1 created and research started",
+        date: "2026-09-18",
+      },
+    ],
+    needsReview: false,
+    resultsReviewed: false,
+  };
+  return [
+    p,
+    ...[
+      {
+        id: "helix-002",
+        name: "Flexible cementitious waterproofing",
+        cat: "waterproofing",
+        sub: "waterproofing-0",
+        stage: "Literature",
+        bm: "bm-2",
+      },
+      {
+        id: "helix-003",
+        name: "Slump-retaining concrete admixture",
+        cat: "concrete",
+        sub: "concrete-0",
+        stage: "Literature",
+        bm: "bm-3",
+      },
+    ].map((x) => {
+      const b = {
+        ...blankBrief(),
+        name: x.name,
+        categoryId: x.cat,
+        subcategoryId: x.sub,
+        targets: defaultTargets(x.sub),
+        benchmarkIds: [x.bm],
+      };
+      return {
+        ...p,
+        id: x.id,
+        brief: b,
+        revisions: [
+          {
+            version: 1,
+            brief: structuredClone(b),
+            date: "2026-10-01",
+            reason: "Initial brief",
+          },
+        ],
+        status: "In progress",
+        stage: x.stage,
+        sources: [],
+        pathways: [],
+        selectedPathway: undefined,
+        trials: [],
+        results: [],
+        approvals: [],
+        comments: [],
+        activity: [],
+        testPlan: b.targets.map((t) => ({
+          propertyId: t.propertyId,
+          required: true,
+          specimens: 3,
+          ageDays: 28,
+          condition: t.condition,
+        })),
+      };
+    }),
+  ];
+}

@@ -1,0 +1,378 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 292px;
+  gap: 28px;
+  align-items: start;
+}
+.stepper {
+  display: flex;
+  margin-bottom: 34px;
+  gap: 0;
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+  color: var(--muted);
+  flex: 1;
+  position: relative;
+}
+.step:not(:last-child)::after {
+  content: "";
+  height: 1px;
+  background: var(--border);
+  flex: 1;
+  margin: 0 14px;
+}
+.stepNumber {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-size: 11px;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.current {
+  color: var(--accent);
+  font-weight: 500;
+}
+.current .stepNumber {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+.done .stepNumber {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: transparent;
+}
+.sectionTitle {
+  margin-bottom: 26px;
+}
+.sectionTitle h2 {
+  font-size: 22px;
+}
+.sectionTitle p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.cardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 20px;
+}
+.category {
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: left;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 185px;
+}
+.category:hover {
+  border-color: var(--accent);
+}
+.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 40%, var(--surface));
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.icon {
+  width: 37px;
+  height: 37px;
+  background: var(--secondary);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+.selected .icon {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.category h3 {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.category p {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.category small {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 18px;
+}
+.radio {
+  position: absolute;
+  right: 19px;
+  top: 19px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  color: var(--on-accent);
+}
+.selected .radio {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.preview {
+  position: sticky;
+  top: 100px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 11px;
+  overflow: hidden;
+}
+.previewHeader {
+  padding: 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.previewHeader h3 {
+  font-size: 13px;
+}
+.previewHeader svg {
+  color: var(--accent);
+}
+.previewBody {
+  padding: 22px;
+}
+.previewItem {
+  margin-bottom: 22px;
+}
+.previewItem:last-child {
+  margin-bottom: 0;
+}
+.previewItem small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+.previewItem p {
+  font-size: 12px;
+}
+.placeholder {
+  color: var(--muted);
+  font-size: 11px !important;
+}
+.previewFooter {
+  background: var(--secondary);
+  padding: 16px 22px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.7;
+  display: flex;
+  gap: 8px;
+}
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 24px;
+  margin-top: 28px;
+  border-top: 1px solid var(--border);
+}
+.modeCard {
+  padding: 28px 24px;
+  min-height: 250px;
+}
+.modeCard h3 {
+  font-size: 18px;
+}
+.modeCard p {
+  font-size: 13px;
+  margin-top: 11px;
+}
+.modeCard ul {
+  list-style: none;
+  padding: 20px 0 0;
+  margin: 20px 0 0;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.modeCard li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.modeCard .icon {
+  width: 46px;
+  height: 46px;
+  margin-bottom: 24px;
+}
+.subList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+.subCard {
+  min-height: 0;
+  padding: 18px 21px;
+}
+.subCard p {
+  padding-right: 30px;
+}
+.subCard .radio {
+  top: 22px;
+}
+.filterRow {
+  display: flex;
+  gap: 10px;
+  margin: 16px 0;
+}
+.filterRow select {
+  font-size: 11px;
+  flex: 1;
+}
+.briefTabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  gap: 28px;
+  margin-bottom: 26px;
+  overflow: auto;
+}
+.briefTabs button {
+  border: 0;
+  background: none;
+  padding: 0 0 13px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.briefTabs .tabActive {
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+.summary {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--secondary);
+  border-radius: 8px;
+}
+.summary p {
+  font-size: 13px;
+  margin-top: 8px;
+  line-height: 1.8;
+}
+.reviewSection {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.reviewSection:first-child {
+  padding-top: 0;
+}
+.reviewSection p {
+  font-size: 12px;
+  margin-top: 10px;
+  color: var(--muted);
+}
+.reviewSection h3 {
+  font-size: 13px;
+}
+.rank {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.rank span {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+}
+.rank select {
+  flex: 1;
+  font-size: 12px;
+}
+@media (max-width: 1150px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 250px;
+    gap: 20px;
+  }
+  .step {
+    font-size: 11px;
+  }
+  .step:not(:last-child)::after {
+    margin: 0 8px;
+  }
+  .category {
+    padding: 18px;
+  }
+  .previewBody,
+  .previewHeader {
+    padding: 18px;
+  }
+}
+@media (max-width: 1000px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .preview {
+    position: static;
+  }
+  .previewBody {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .previewItem {
+    margin: 0;
+  }
+  .modeCard {
+    min-height: 320px;
+  }
+}
+@media (max-width: 600px) {
+  .cardGrid {
+    grid-template-columns: 1fr;
+  }
+  .step {
+    font-size: 11px;
+    gap: 5px;
+  }
+  .stepNumber {
+    width: 20px;
+    height: 20px;
+  }
+  .step:not(:last-child)::after {
+    margin: 0 5px;
+  }
+  .actions {
+    gap: 12px;
+  }
+  .actions > div {
+    gap: 5px;
+  }
+  .briefTabs {
+    gap: 20px;
+  }
+}

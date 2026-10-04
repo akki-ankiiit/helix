@@ -1,0 +1,143 @@
+.stat {
+  padding: 21px 24px;
+}
+.stat .stat {
+  margin: 0;
+}
+.stat > div:first-child {
+  font-size: 12px;
+  color: var(--muted);
+}
+.stat svg {
+  color: var(--accent);
+}
+.stat small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.project {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 23px;
+  transition:
+    border-color 0.2s,
+    transform 0.2s;
+  min-width: 0;
+}
+.project:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+.projectIcon {
+  width: 39px;
+  height: 39px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.projectCode {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 25px;
+}
+.project h2 {
+  font-size: 18px;
+  line-height: 1.45;
+  margin-top: 8px;
+  min-height: 52px;
+  max-width: 260px;
+}
+.project > p {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.stage {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 26px 0 9px;
+}
+.stage span:first-child {
+  color: var(--accent);
+}
+.project footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 23px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+}
+.project footer > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--secondary);
+  color: var(--muted);
+  font-size: 11px;
+}
+.activity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 17px 0;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.activity strong {
+  font-weight: 500;
+}
+.activity small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.activity time {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+.activityDot {
+  width: 30px;
+  height: 30px;
+  background: var(--secondary);
+  color: var(--muted);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.draft {
+  padding: 18px 22px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 9px;
+  margin-bottom: 30px;
+  background: var(--surface);
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+.draft p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 5px;
+}
