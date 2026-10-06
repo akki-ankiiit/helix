@@ -129,8 +129,19 @@ test("Use as starting point: copy is editable, recalculates, accepts a proposal,
 test("complete seven-step workflow for a new epoxy grout; blob shows and clears", async ({ page }) => {
   await enter(page);
   await page.getByRole("button", { name: "New project" }).click();
+  await expect(page).toHaveURL(/\/projects\/new$/);
+  await expect(page.getByRole("heading", { name: "What are you formulating?" })).toBeVisible();
+  await page.getByRole("link", { name: /Tile, stone and flooring/ }).click();
+  await expect(page).toHaveURL(/\/projects\/new\/tile$/);
+  await expect(page.getByRole("button", { name: "Start project" })).toBeDisabled();
+  await page.getByRole("radio", { name: /Epoxy grouts/ }).click();
+  await expect(page.getByRole("radio", { name: /^Epoxy grout\b/ })).toBeChecked();
+  await page.reload();
+  await expect(page.getByRole("radio", { name: /Epoxy grouts/ })).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("button", { name: "Start project" }).click();
   await expect(page).toHaveURL(/\/projects\/HX-101\/type$/);
-  await page.getByRole("radio", { name: /Epoxy grout/ }).check();
+  await expect(page.getByLabel(/Product category/)).toHaveValue("tile");
+  await expect(page.getByLabel(/Product family/)).toHaveValue("tile-2");
   await page.getByLabel(/Formulation task/).selectOption("New formulation");
   await page.getByLabel(/Project title/).fill("Epoxy grout trial");
   await page.getByRole("button", { name: "Next: Data Sources" }).click();
@@ -189,7 +200,14 @@ test("complete seven-step workflow for a new epoxy grout; blob shows and clears"
 
 test("identification failure path explains the fix and clears the blob", async ({ page }) => {
   await enter(page);
-  await page.getByRole("button", { name: "New project" }).click();
+  await page.goto(`${BASE}/projects/new/tile?family=tile-0`);
+  await page.getByRole("button", { name: "Start project" }).click();
+  await expect(page).toHaveURL(/HX-101\/type$/);
+  await page.evaluate(() => {
+    const st = JSON.parse(localStorage.getItem("helix-planner")!);
+    st.state.projects[0].category = "";
+    localStorage.setItem("helix-planner", JSON.stringify(st));
+  });
   await page.goto(`${BASE}/projects/HX-101/pathways/components`);
   await expect(page.getByRole("button", { name: "Identify formulation components" })).toBeDisabled();
   await expect(page.getByText(/Choose a product category in/)).toBeVisible();
@@ -207,9 +225,25 @@ test("earlier synthesis-era user projects are archived, not deleted", async ({ p
   await page.goto(`${BASE}/settings`);
   await expect(page.getByRole("heading", { name: "Archived projects" })).toBeVisible();
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("helix-planner")!));
-  expect(stored.version).toBe(2);
+  expect(stored.version).toBe(3);
   expect(stored.state.archived[0].title).toBe("My old plan");
   expect(stored.state.nextNumber).toBe(102);
+});
+
+test("new project: category and family come first; unknown category redirects", async ({ page }) => {
+  await enter(page);
+  await page.goto(`${BASE}/projects/new/not-a-category`);
+  await expect(page).toHaveURL(/\/projects\/new$/);
+  await page.getByPlaceholder("Search categories and product families").fill("waterproof");
+  await expect(page.getByRole("link", { name: /Waterproofing and sealing/ })).toBeVisible();
+  await page.getByRole("link", { name: /Waterproofing and sealing/ }).click();
+  await page.getByRole("radio", { name: /Joint sealants/ }).click();
+  await expect(page.getByRole("radio", { name: /General formulation/ })).toBeChecked();
+  await page.getByRole("button", { name: "Back to categories" }).click();
+  await expect(page).toHaveURL(/\/projects\/new$/);
+  await page.getByRole("button", { name: "Back to projects" }).click();
+  await expect(page).toHaveURL(/\/projects$/);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("helix-planner") || '{"state":{"projects":[]}}').state.projects.length)).toBe(0);
 });
 
 test("direct links, refresh, back/forward, legacy routes", async ({ page }) => {
@@ -237,7 +271,7 @@ test("mobile layout, keyboard navigation and no horizontal overflow", async ({ p
   await enter(page);
   for (const width of [390, 820, 1280]) {
     await page.setViewportSize({ width, height: 900 });
-    for (const route of ["/projects", "/projects/HX-005/create", "/projects/HX-003/pathways/composition", "/projects/HX-002/pathways/experiment", "/projects/HX-001/literature", "/reports", "/settings"]) {
+    for (const route of ["/projects", "/projects/new", "/projects/new/tile?family=tile-0", "/projects/HX-002/type", "/projects/HX-005/create", "/projects/HX-003/pathways/composition", "/projects/HX-002/pathways/experiment", "/projects/HX-001/literature", "/reports", "/settings"]) {
       await page.goto(`${BASE}${route}`);
       await page.locator("main h1").first().waitFor();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width} ${route}`).toBe(true);

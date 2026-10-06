@@ -1,12 +1,14 @@
 import { useState } from "react";
 import {
   BookOpen,
+  Boxes,
   ClipboardList,
   Combine,
   Droplets,
   ExternalLink,
   FileText,
   FlaskConical,
+  Grid2X2,
   Grid3X3,
   Layers,
   Plus,
@@ -18,7 +20,8 @@ import {
 } from "lucide-react";
 import { Button, Empty, Field, Notice, s } from "../../components/ui";
 import type { Category, Evidence, Project, SourceKind, SourceRef } from "../../planner/model";
-import { categories, tasks } from "../../planner/model";
+import { tasks } from "../../planner/model";
+import { categoryFor, formulationTypesFor, subcategoryFor, taxonomy } from "../../planner/families";
 import { sourceKinds } from "../../planner/sources";
 import { evidenceLabel, type Check } from "../../planner/calc";
 import { Editable, LiteratureTable, nid, useEditor } from "./ui";
@@ -33,16 +36,20 @@ interface StepProps {
 export const categoryIcons: Record<Category, LucideIcon> = {
   "Tile cleaner": SprayCan,
   "Tile adhesive": Layers,
+  "Cementitious grout": Grid2X2,
   "Epoxy grout": Grid3X3,
   "Epoxy adhesive": Combine,
   "Waterproofing coating": Droplets,
+  "General formulation": Boxes,
 };
-const categoryHelp: Record<Category, string> = {
+export const categoryHelp: Record<Category, string> = {
   "Tile cleaner": "Substrate compatibility, cleaning performance, residue, pH",
   "Tile adhesive": "Binder and additives, water demand, workability, adhesion",
+  "Cementitious grout": "Workability, colour consistency, cleanability, durability",
   "Epoxy grout": "Resin/hardener ratio, fillers, pot life, cleanability, cure",
   "Epoxy adhesive": "Bond strength, substrate preparation, pot life, cure",
   "Waterproofing coating": "Polymer/cement system, coats, curing, water resistance",
+  "General formulation": "No template: define components and tests yourself",
 };
 export const sourceIcons: Record<SourceKind, LucideIcon> = {
   "Technical data sheet": FileText,
@@ -59,33 +66,61 @@ const errorFor = (checks: Check[], match: RegExp) => checks.find((x) => match.te
 export function TypeStep({ p, readOnly, checks }: StepProps) {
   const edit = useEditor(p);
   const mine = checks.filter((x) => x.step === "type");
+  const category = categoryFor(p.categoryId);
+  const types = p.subcategoryId ? formulationTypesFor(p.subcategoryId) : [];
   return (
     <Editable readOnly={readOnly}>
       <div className={s.stack}>
-        <fieldset className={c.categoryGrid} aria-describedby="cat-help">
-          <legend>
-            Product category <span className={s.required}>Required</span>
-          </legend>
-          <p id="cat-help" className={c.helper}>The category sets the component structure, the checks Helix runs and the suggested tests.</p>
-          {categories.map((cat) => {
-            const Icon = categoryIcons[cat];
-            const on = p.category === cat;
-            return (
-              <label key={cat} className={`${c.categoryCard} ${on ? c.choiceOn : ""}`}>
-                <input type="radio" name="category" checked={on} onChange={() => edit((d) => { d.category = cat; })} />
-                <Icon size={20} aria-hidden="true" className={c.categoryIcon} />
-                <span>
-                  <b>{cat}</b>
-                  <small>{categoryHelp[cat]}</small>
-                </span>
-              </label>
-            );
-          })}
-          {errorFor(mine, /category/) && <small className={s.error} role="alert">{errorFor(mine, /category/)}</small>}
-          {p.category && p.ingredients.length > 0 && !readOnly && (
-            <small className={s.muted}>Changing the category does not delete existing ingredients; review them in Pathways.</small>
-          )}
-        </fieldset>
+        <div className={s.formGrid}>
+          <Field label="Product category" required error={errorFor(mine, /category and product family/)}>
+            <select value={p.categoryId} onChange={(e) => edit((d) => { d.categoryId = e.target.value; d.subcategoryId = ""; })}>
+              <option value="">Choose a category</option>
+              {taxonomy.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Product family" required hint={category ? undefined : "Choose a category first."}>
+            <select
+              value={p.subcategoryId}
+              disabled={!category}
+              onChange={(e) => edit((d) => {
+                d.subcategoryId = e.target.value;
+                const allowed = formulationTypesFor(e.target.value);
+                if (!d.category || !allowed.includes(d.category)) d.category = allowed[0];
+              })}
+            >
+              <option value="">Choose a product family</option>
+              {category?.subcategories.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+          </Field>
+        </div>
+        {types.length > 0 && (
+          <fieldset className={c.typeChoice}>
+            <legend>
+              Formulation type <span className={s.required}>Required</span>
+            </legend>
+            <p className={c.helper}>
+              Sets the component structure, the checks Helix runs and the suggested tests. Only types that apply to {subcategoryFor(p.subcategoryId)?.name.toLowerCase()} are shown.
+            </p>
+            <div className={c.typeGrid}>
+              {types.map((t) => {
+                const Icon = categoryIcons[t];
+                const on = p.category === t;
+                return (
+                  <label key={t} className={`${c.categoryCard} ${on ? c.choiceOn : ""}`}>
+                    <input type="radio" name="category" checked={on} onChange={() => edit((d) => { d.category = t; })} />
+                    <Icon size={20} aria-hidden="true" className={c.categoryIcon} />
+                    <span>
+                      <b>{t}</b>
+                      <small>{categoryHelp[t]}</small>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            {errorFor(mine, /formulation type/) && <small className={s.error} role="alert">{errorFor(mine, /formulation type/)}</small>}
+            {p.ingredients.length > 0 && !readOnly && <small className={s.muted}>Changing the type does not delete existing ingredients; review them in Pathways.</small>}
+          </fieldset>
+        )}
         <div className={s.formGrid}>
           <Field label="Formulation task" required error={errorFor(mine, /task/)}>
             <select value={p.task} onChange={(e) => edit((d) => { d.task = e.target.value as Project["task"]; })}>
@@ -94,7 +129,7 @@ export function TypeStep({ p, readOnly, checks }: StepProps) {
             </select>
           </Field>
           <Field label="Project title" required error={errorFor(mine, /title/)} hint="Shown on the project list and the report.">
-            <input value={p.title} placeholder="e.g. Cementitious tile adhesive C2TE" onChange={(e) => edit((d) => { d.title = e.target.value; })} />
+            <input value={p.title} placeholder="e.g. C2TE adhesive for vitrified tiles" onChange={(e) => edit((d) => { d.title = e.target.value; })} />
           </Field>
           <Field label="Development focus" optional className={s.full} hint="What matters most, e.g. water demand, slip and adhesion.">
             <input value={p.focus} onChange={(e) => edit((d) => { d.focus = e.target.value; })} />

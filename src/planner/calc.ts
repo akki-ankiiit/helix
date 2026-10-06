@@ -219,7 +219,8 @@ const httpsUrl = (u: string) => /^https:\/\/[^\s]+\.[^\s]+/.test(u.trim());
 export function validate(p: Project, calc = projectCalc(p)): Check[] {
   const c: Check[] = [];
   if (p.title.trim().length < 3) c.push({ step: "type", message: "Enter a project title of at least 3 characters." });
-  if (!p.category) c.push({ step: "type", message: "Choose a product category." });
+  if (!p.categoryId || !p.subcategoryId) c.push({ step: "type", message: "Choose a product category and product family." });
+  if (!p.category) c.push({ step: "type", message: "Choose a formulation type." });
   if (!p.task) c.push({ step: "type", message: "Choose the formulation task." });
   const selected = p.sources.filter((s) => s.selected);
   if (!selected.length) c.push({ step: "sources", message: "Select at least one data source." });

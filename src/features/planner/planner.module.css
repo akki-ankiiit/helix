@@ -31,15 +31,15 @@
 .statusWarn { color: var(--amber); font-weight: 500; }
 .statusPending { color: var(--muted); font-weight: 500; }
 .inlineFilter { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
-.inlineFilter select { height: 34px; }
+.inlineFilter select { height: 34px; padding: 4px 30px 4px 10px; line-height: 1.3; }
 .plainList { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 
 /* Type ---------------------------------------------------------------------- */
 .categoryGrid { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-.categoryGrid legend { font-size: 14px; font-weight: 600; margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
+.categoryGrid legend { padding: 0; font-size: 14px; font-weight: 600; margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
 .categoryGrid > p, .categoryGrid > small { grid-column: 1 / -1; }
 .categoryCard { display: flex; gap: 10px; align-items: flex-start; padding: 14px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
-.categoryCard input { margin-top: 3px; }
+.categoryCard input { margin-top: 2px; }
 .categoryCard b { display: block; font-size: 14px; }
 .categoryCard small { display: block; color: var(--muted); margin-top: 2px; font-size: 12px; }
 .categoryIcon { color: var(--accent); margin-top: 1px; }
@@ -59,7 +59,7 @@
 .addBox > button { align-self: flex-start; }
 .addBox legend { font-weight: 600; font-size: 13px; padding: 0 6px; }
 .listEditor { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-.listEditor legend { font-size: 14px; font-weight: 600; margin-bottom: 8px; display: flex; gap: 8px; align-items: center; }
+.listEditor legend { padding: 0; font-size: 14px; font-weight: 600; margin-bottom: 8px; display: flex; gap: 8px; align-items: center; }
 .listRow { display: flex; gap: 8px; align-items: center; align-self: stretch; }
 .listRow input { flex: 1; }
 .listRow p { font-size: 13px; }
@@ -220,4 +220,52 @@
   .timeline { grid-template-columns: 1fr; gap: 10px; }
   .timeline li { flex-direction: row; gap: 10px; }
   .timeline li::before { top: 14px; bottom: -10px; left: 6px; right: auto; width: 2px; height: auto; }
+}
+
+/* New project: category and product family (restored pre-project steps) --- */
+.newHeader { margin-bottom: 20px; display: flex; flex-direction: column; gap: 6px; }
+.newHeader h1 { font-size: 26px; }
+.preSteps { list-style: none; margin: 8px 0 0; padding: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.preSteps li { display: flex; align-items: center; gap: 8px; }
+.preSteps li > span { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--border); font-size: 12px; font-weight: 600; background: var(--surface); }
+.preCurrent { color: var(--accent); font-weight: 600; }
+.preCurrent > span { background: var(--accent) !important; border-color: var(--accent) !important; color: var(--on-accent); }
+.preDone { color: var(--text); }
+.preDone > span { background: var(--green-soft) !important; border-color: transparent !important; color: var(--green); }
+.preSep { color: var(--border); }
+.catGrid { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.catCard { display: flex; align-items: flex-start; gap: 14px; padding: 18px; border: 1px solid var(--border); border-radius: 10px; height: 100%; }
+.catCard:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); background: color-mix(in srgb, var(--accent-soft) 25%, var(--surface)); }
+.catIcon { width: 40px; height: 40px; border-radius: 9px; display: grid; place-items: center; background: var(--secondary); color: var(--accent); flex-shrink: 0; }
+.catText { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.catText b { font-size: 15px; }
+.catText small { font-size: 13px; color: var(--muted); }
+.catCount { margin-top: 6px; font-size: 12px !important; font-weight: 500; color: var(--accent) !important; }
+.catChevron { color: var(--muted); align-self: center; }
+.newFooter > .ghostBack { margin-left: -15px; }
+.newFooter { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
+.newStart { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.chosen { font-size: 13px; color: var(--muted); margin-bottom: 14px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.chosen b { color: var(--text); }
+.filterRow { display: grid; grid-template-columns: minmax(0, 1fr) 190px 170px; gap: 10px; margin-bottom: 16px; }
+.famGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.famCard { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px 44px 16px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); text-align: left; }
+.famCard:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.famCard b { font-size: 14px; }
+.famCard small { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.famCard > span:last-child { margin-top: 6px; }
+.radioDot { position: absolute; right: 16px; top: 16px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border); display: grid; place-items: center; background: var(--surface); }
+.choiceOn .radioDot { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.typeChoice { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.typeSection { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+.typeChoice legend { padding: 0; font-size: 14px; font-weight: 600; margin-bottom: 4px; display: flex; gap: 8px; align-items: center; }
+.typeGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+@media (max-width: 700px) {
+  .catGrid, .famGrid { grid-template-columns: 1fr; }
+  .filterRow { grid-template-columns: 1fr 1fr; }
+  .filterRow > :first-child { grid-column: 1 / -1; }
+  .newHeader h1 { font-size: 22px; }
+  .newFooter { flex-direction: column-reverse; align-items: stretch; }
+  .newStart { justify-content: flex-end; }
+  .newFooter > .ghostBack { align-self: flex-start; }
 }

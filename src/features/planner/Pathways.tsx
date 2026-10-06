@@ -49,6 +49,8 @@ interface Props {
 export const productLogic: Record<Category, string[]> = {
   "Tile cleaner": ["Substrate compatibility (acid-sensitive stone, grout, metal fittings)", "Cleaning performance on the target soil", "Residue after rinsing", "pH and hazard classification", "Material compatibility of packaging"],
   "Tile adhesive": ["Binder and additive functions", "Water demand and workability", "Open time, adjustability and slip", "Application conditions (temperature, substrate)", "Adhesion testing after the required storage conditions"],
+  "Cementitious grout": ["Workability and joint filling", "Application and cleaning from tile faces", "Colour consistency between batches", "Cleanability and stain resistance", "Durability tests (strength, abrasion, water absorption, shrinkage)"],
+  "General formulation": ["Fitness for the intended application", "Ingredient functions and compatibility", "Processing requirements", "Performance tests and acceptance criteria", "Supplier data and evidence"],
   "Epoxy grout": ["Resin/hardener compatibility", "Mixing ratio supported by supplier data", "Pot life and cleaning window", "Curing and return to service", "Colour consistency, cleanability and durability tests"],
   "Epoxy adhesive": ["Substrate preparation", "Resin/hardener compatibility and supplier ratio", "Pot life at site temperature", "Cure performance", "Bond-strength testing"],
   "Waterproofing coating": ["System components (liquid and powder)", "Application in coats and reinforcement", "Curing before water contact or tiling", "Adhesion to substrate", "Water-resistance and crack-bridging tests"],

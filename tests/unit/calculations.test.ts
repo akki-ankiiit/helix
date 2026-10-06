@@ -25,11 +25,11 @@ import { migrateToInr } from "../../src/stores/migrations";
 import { normaliseIntakeStep } from "../../src/data/intake-steps";
 import { properties, defaultTargets } from "../../src/data/property-library";
 describe("configurable taxonomy", () => {
-  it("contains exactly six categories and 33 unique families", () => {
+  it("contains six categories and 34 unique families (incl. tile cleaners)", () => {
     expect(taxonomy).toHaveLength(6);
     expect(
       new Set(taxonomy.flatMap((c) => c.subcategories.map((s) => s.id))).size,
-    ).toBe(33);
+    ).toBe(34);
   });
   it("loads valid draft properties for every family", () => {
     for (const sub of taxonomy.flatMap((c) => c.subcategories)) {

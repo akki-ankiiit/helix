@@ -71,6 +71,12 @@ export const templates: Record<Category, Template> = {
     required: ["Binder", "Filler", "Polymer modifier", "Water retention / thickener"],
     tests: [blankTest("Tensile adhesion — initial", "EN 12004-2 8.3", "N/mm²"), blankTest("Open time", "EN 12004-2 8.1", "N/mm²"), blankTest("Slip", "EN 12004-2 8.2", "mm")],
   },
+  "Cementitious grout": {
+    parts: [{ id: "P", name: "Powder", description: "Dry grout mixed with water" }],
+    ingredients: [{ part: "P", name: "Ordinary Portland cement" }, { part: "P", name: "Silica sand" }, { part: "P", name: "Limestone powder" }, { part: "P", name: "Redispersible polymer powder" }, { part: "P", name: "Cellulose ether" }, { part: "P", name: "Pigment" }],
+    required: ["Binder", "Filler"],
+    tests: [blankTest("Flexural strength", "EN 13888-2", "N/mm²"), blankTest("Compressive strength", "EN 13888-2", "N/mm²"), blankTest("Abrasion resistance", "EN 13888-2", "mm³"), blankTest("Water absorption", "EN 13888-2", "g"), blankTest("Colour consistency", "Visual comparison with colour standard")],
+  },
   "Epoxy grout": {
     parts: [{ id: "A", name: "Part A (resin + filler)", description: "Filled resin" }, { id: "B", name: "Part B (hardener)", description: "Hardener" }],
     ingredients: [{ part: "A", name: "Liquid epoxy resin" }, { part: "A", name: "Silica sand" }, { part: "A", name: "Fumed silica" }, { part: "B", name: "Amine hardener" }],
@@ -88,6 +94,12 @@ export const templates: Record<Category, Template> = {
     ingredients: [{ part: "L", name: "Acrylic dispersion" }, { part: "L", name: "Water" }, { part: "P", name: "Ordinary Portland cement" }, { part: "P", name: "Silica sand" }],
     required: ["Polymer modifier", "Binder", "Filler"],
     tests: [blankTest("Initial tensile adhesion", "EN 14891 A.6.2", "N/mm²"), blankTest("Water impermeability", "EN 14891 A.7"), blankTest("Crack-bridging", "EN 14891 A.8.2", "mm")],
+  },
+  "General formulation": {
+    parts: [{ id: "P", name: "Product", description: "Single component" }],
+    ingredients: [],
+    required: [],
+    tests: [blankTest("Key performance property", "Method to be selected")],
   },
 };
 
@@ -133,7 +145,7 @@ export function identifyComponents(p: Project): IdentifyResult {
   }
   if (next.parts.length > 1 && !next.mixRatio)
     next.mixRatio = { parts: Object.fromEntries(next.parts.map((x) => [x.id, 0])), evidence: "illustrative", note: "Set from supplier data or calculation." };
-  if (next.category === "Tile adhesive" && !next.water)
+  if ((next.category === "Tile adhesive" || next.category === "Cementitious grout") && !next.water)
     next.water = { pctOfPowder: null, evidence: "illustrative", note: "Enter the mixing water as % of powder." };
   let matched = 0;
   const needsData: string[] = [];

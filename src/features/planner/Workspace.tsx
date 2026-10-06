@@ -7,6 +7,7 @@ import { planStatus, stepDone, validate, validationStatus } from "../../planner/
 import { usePlanner, useProject } from "../../planner/store";
 import { downloadReport } from "../../planner/report";
 import { useWorkspace } from "../../stores/workspace";
+import { familyLabel } from "../../planner/families";
 import { DescribeStep, LiteratureStep, SourcesStep, TypeStep } from "./Steps";
 import { PathwaysStep } from "./Pathways";
 import { CreateStep, ReviewStep } from "./Final";
@@ -84,6 +85,7 @@ export function Workspace() {
             <h1>{p.title || "Untitled project"}</h1>
             <p className={c.meta}>
               {p.id}
+              {p.subcategoryId && ` · ${familyLabel(p.categoryId, p.subcategoryId)}`}
               {p.category && ` · ${p.category}`}
               {p.task && ` · ${p.task}`}
               {p.createdFrom && ` · Copied from ${p.createdFrom}`}

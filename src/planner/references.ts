@@ -92,6 +92,8 @@ const hx1 = (() => {
   return finish({
     ...base,
     id: "HX-001",
+    categoryId: "tile",
+    subcategoryId: "tile-8",
     title: "Tile cleaner for ceramic and porcelain surfaces",
     category: "Tile cleaner",
     task: "New formulation",
@@ -182,6 +184,8 @@ const hx2 = (() => {
   return finish({
     ...base,
     id: "HX-002",
+    categoryId: "tile",
+    subcategoryId: "tile-0",
     title: "Cementitious tile adhesive",
     category: "Tile adhesive",
     task: "New formulation",
@@ -279,6 +283,8 @@ const hx3 = (() => {
   return finish({
     ...base,
     id: "HX-003",
+    categoryId: "tile",
+    subcategoryId: "tile-2",
     title: "Two-component epoxy tile grout",
     category: "Epoxy grout",
     task: "New formulation",
@@ -381,6 +387,8 @@ const hx4 = (() => {
   return finish({
     ...base,
     id: "HX-004",
+    categoryId: "tile",
+    subcategoryId: "tile-0",
     title: "Two-component epoxy bonding adhesive",
     category: "Epoxy adhesive",
     task: "New formulation",
@@ -481,6 +489,8 @@ const hx5 = (() => {
   return finish({
     ...base,
     id: "HX-005",
+    categoryId: "waterproofing",
+    subcategoryId: "waterproofing-0",
     title: "Cementitious waterproofing coating",
     category: "Waterproofing coating",
     task: "New formulation",

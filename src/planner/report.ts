@@ -11,6 +11,7 @@ import {
   validationStatus,
 } from "./calc";
 import { formatDate } from "../lib/format";
+import { familyLabel } from "./families";
 
 const esc = (v: unknown) =>
   String(v ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
@@ -56,7 +57,7 @@ ul{padding-left:18px}@media print{.noprint{display:none}body{margin:0}}
 </style></head><body>
 <p class="muted">HELIX · FORMULATION-DEVELOPMENT PLAN · ${esc(p.id)}</p>
 <h1>${esc(p.title)}</h1>
-<p class="muted">${esc(p.category)} · ${esc(p.task)} · Plan ${p.plan ? `v${p.plan.version} generated ${formatDate(p.plan.generatedAt)}` : "not generated"}</p>
+<p class="muted">${esc(familyLabel(p.categoryId, p.subcategoryId))} · ${esc(p.category)} · ${esc(p.task)} · Plan ${p.plan ? `v${p.plan.version} generated ${formatDate(p.plan.generatedAt)}` : "not generated"}</p>
 <div class="status"><div><span class="muted">Plan status</span><b>${esc(status)}</b></div><div><span class="muted">Project type</span><b>${p.reference ? "Reference sample" : "User project"}</b></div><div><span class="muted">Experimental validation</span><b>${esc(validationStatus(p))}</b></div></div>
 <p class="muted">“Completed” means the development plan is complete. The formulation has not been tested in a laboratory or on site unless results are listed below. No certification, standards compliance or price is claimed.</p>
 <div class="box"><strong>${esc(sum.headline)}</strong><p>${esc(sum.explanation)}</p><p><b>Deliverable:</b> ${esc(p.deliverable)}</p></div>
@@ -122,7 +123,8 @@ export function downloadWorkbook(p: Project) {
   add("Summary", [
     ["Helix formulation-development plan", p.id],
     ["Title", p.title],
-    ["Category", p.category],
+    ["Category and family", familyLabel(p.categoryId, p.subcategoryId)],
+    ["Formulation type", p.category],
     ["Plan status", planStatus(p)],
     ["Project type", p.reference ? "Reference sample" : "User project"],
     ["Experimental validation", validationStatus(p)],

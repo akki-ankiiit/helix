@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type { Project } from "./model";
 import { referenceProjects, referenceIds } from "./references";
 import { inputsHash, validate } from "./calc";
+import { defaultFamilyFor } from "./families";
 
 // Reference projects ship with the app and are never written to storage, so
 // they cannot be altered. User projects (new ones and copies) are saved in
@@ -13,7 +14,7 @@ interface PlannerState {
   /** Synthesis-planning projects from the previous version, kept unchanged. */
   archived: unknown[];
   nextNumber: number;
-  create: () => string;
+  create: (init?: Partial<Project>) => string;
   duplicate: (id: string) => string | null;
   update: (id: string, fn: (p: Project) => Project) => boolean;
   generatePlan: (id: string) => { ok: true } | { ok: false; reason: string };
@@ -22,12 +23,14 @@ interface PlannerState {
 
 const now = () => new Date().toISOString();
 
-export function blankProject(id: string): Project {
+export function blankProject(id: string, init: Partial<Project> = {}): Project {
   const t = now();
   return {
     id,
     reference: false,
     title: "",
+    categoryId: "",
+    subcategoryId: "",
     category: "",
     task: "",
     focus: "",
@@ -55,6 +58,7 @@ export function blankProject(id: string): Project {
     deliverable: "Formulation-development plan and report",
     created: t,
     updated: t,
+    ...init,
   };
 }
 
@@ -64,10 +68,10 @@ export const usePlanner = create<PlannerState>()(
       projects: [],
       archived: [],
       nextNumber: 101,
-      create: () => {
+      create: (init) => {
         const id = `HX-${get().nextNumber}`;
         set((s) => ({
-          projects: [blankProject(id), ...s.projects],
+          projects: [blankProject(id, init), ...s.projects],
           nextNumber: s.nextNumber + 1,
         }));
         return id;
@@ -125,14 +129,25 @@ export const usePlanner = create<PlannerState>()(
     }),
     {
       name: "helix-planner",
-      version: 2,
+      version: 3,
       // Version 1 held organic-synthesis projects with a different structure.
       // They are archived (not deleted) and can be downloaded from Settings.
       migrate: (persisted, version) => {
         const s = (persisted || {}) as { projects?: unknown[]; archived?: unknown[]; nextNumber?: number };
-        if (version < 2)
-          return { ...s, archived: [...(s.archived || []), ...(s.projects || [])], projects: [] } as unknown as PlannerState;
-        return s as unknown as PlannerState;
+        let next = s;
+        if (version < 2) next = { ...next, archived: [...(next.archived || []), ...(next.projects || [])], projects: [] };
+        // Version 3 adds the product category and family to each project.
+        if (version < 3)
+          next = {
+            ...next,
+            projects: (next.projects || []).map((raw) => {
+              const pr = raw as Project;
+              if (pr.categoryId) return pr;
+              const [categoryId, subcategoryId] = pr.category ? defaultFamilyFor[pr.category] : ["", ""];
+              return { ...pr, categoryId, subcategoryId };
+            }),
+          };
+        return next as unknown as PlannerState;
       },
     },
   ),

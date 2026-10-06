@@ -53,6 +53,7 @@ const groups = [
       "Screeds",
       "Floor hardeners",
       "Resin floors",
+      "Tile cleaners",
     ],
   ],
   [
@@ -96,10 +97,10 @@ export const taxonomy: Category[] = groups.map(
           name,
         )
           ? "Polymer-based"
-          : /Admixture|accelerator|grinding/i.test(name)
+          : /Admixture|accelerator|grinding|cleaner/i.test(name)
             ? "Aqueous chemistry"
             : "Mineral-based",
-      form: /resin|sealant|coating|Curing|Release|primer|Admixture|accelerator|grinding/i.test(
+      form: /resin|sealant|coating|Curing|Release|primer|Admixture|accelerator|grinding|cleaner/i.test(
         name,
       )
         ? "Liquid / paste"
@@ -118,6 +119,10 @@ export const examples: Record<string, string> = {
   "masonry-1": "Ready-mix plaster and gypsum plaster.",
   "waterproofing-0":
     "Cementitious, acrylic, polyurethane, bituminous, and crystalline systems.",
+  "tile-0": "Cementitious (C1/C2) and reaction-resin (R) adhesives.",
+  "tile-1": "Cementitious grouts for joints of ceramic, porcelain and stone tiles.",
+  "tile-2": "Two-component reaction-resin grouts (class RG).",
   "tile-7": "Epoxy and polyurethane systems.",
+  "tile-8": "Acidic, neutral and alkaline cleaners for ceramic and porcelain tiles.",
   "specialty-0": "Intumescent coatings and firestop.",
 };

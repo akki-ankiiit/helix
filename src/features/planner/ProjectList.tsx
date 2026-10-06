@@ -6,6 +6,7 @@ import type { Project } from "../../planner/model";
 import { planStatus, validationStatus, type PlanStatus } from "../../planner/calc";
 import { categories } from "../../planner/model";
 import { categoryIcons } from "./Steps";
+import { familyLabel } from "../../planner/families";
 import { usePlanner, useAllProjects } from "../../planner/store";
 import { downloadReport } from "../../planner/report";
 import { useWorkspace } from "../../stores/workspace";
@@ -17,7 +18,7 @@ type Sort = "id" | "title" | "updated";
 export function ProjectList() {
   const all = useAllProjects();
   const navigate = useNavigate();
-  const { create, duplicate, remove } = usePlanner();
+  const { duplicate, remove } = usePlanner();
   const notify = useWorkspace((x) => x.notify);
   const [query, setQuery] = useState(""),
     [type, setType] = useState("All types"),
@@ -33,7 +34,7 @@ export function ProjectList() {
     return all
       .map((p) => ({ p, status: planStatus(p) as PlanStatus, approach: p.approaches.find((a) => a.id === p.selectedApproachId)?.name }))
       .filter(({ p, status: st }) =>
-        (!q || `${p.title} ${p.category} ${p.focus} ${p.id}`.toLowerCase().includes(q)) &&
+        (!q || `${p.title} ${p.category} ${familyLabel(p.categoryId, p.subcategoryId)} ${p.focus} ${p.id}`.toLowerCase().includes(q)) &&
         (type === "All types" || p.category === type) &&
         (status === "All statuses" || st === status) &&
         (owner === "All projects" || (owner === "Reference projects" ? p.reference : !p.reference)),
@@ -48,8 +49,7 @@ export function ProjectList() {
   }, [all, query, type, status, owner, sort]);
 
   function newProject() {
-    const id = create();
-    navigate(`/projects/${id}/type`);
+    navigate("/projects/new");
   }
   function copy(p: Project) {
     const id = duplicate(p.id);
@@ -121,11 +121,11 @@ export function ProjectList() {
                   <span className={c.cardIcon} aria-hidden="true"><Icon size={18} /></span>
                   <Status value={st} />
                 </div>
-                <span className={c.cardId}>{p.id} · {p.category || "No category yet"}</span>
+                <span className={c.cardId}>{p.id} · {familyLabel(p.categoryId, p.subcategoryId) || "No category yet"}</span>
                 <h2>{p.title || "Untitled project"}</h2>
                 <p className={c.cardPurpose}>{p.objective ? truncate(p.objective, 150) : "No objective yet."}</p>
                 <dl className={c.cardMeta}>
-                  <div><dt>Development focus</dt><dd>{p.focus || "—"}</dd></div>
+                  <div><dt>Formulation type</dt><dd>{p.category || "—"}</dd></div>
                   <div><dt>Validation</dt><dd>{validationStatus(p)}</dd></div>
                 </dl>
                 {p.reference && <Badge tone="violet">Reference sample</Badge>}
@@ -161,7 +161,7 @@ export function ProjectList() {
                       <Link to={`/projects/${p.id}`} className={c.tableLink}><b>{p.title || "Untitled project"}</b></Link>
                       <small>{p.id}{p.reference ? " · Reference sample" : p.createdFrom ? ` · copy of ${p.createdFrom}` : ""}</small>
                     </td>
-                    <td>{p.category || "—"}</td>
+                    <td style={{ whiteSpace: "normal", minWidth: 160 }}>{familyLabel(p.categoryId, p.subcategoryId) || "—"}<small>{p.category}</small></td>
                     <td style={{ whiteSpace: "normal", minWidth: 160 }}>{approach || "—"}</td>
                     <td className={s.num}>{p.ingredients.length || "—"}</td>
                     <td><Status value={st} /></td>

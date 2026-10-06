@@ -5,12 +5,15 @@
 /** Where a value comes from. Shown next to values throughout Helix. */
 export type Evidence = "source" | "calculated" | "illustrative" | "not-reported";
 
+/** Formulation types: each has its own component template, checks and tests. */
 export const categories = [
   "Tile cleaner",
   "Tile adhesive",
+  "Cementitious grout",
   "Epoxy grout",
   "Epoxy adhesive",
   "Waterproofing coating",
+  "General formulation",
 ] as const;
 export type Category = (typeof categories)[number];
 
@@ -228,6 +231,10 @@ export interface Project {
   id: string;
   reference: boolean;
   title: string;
+  /** Product category and family from the construction-chemical taxonomy. */
+  categoryId: string;
+  subcategoryId: string;
+  /** Formulation type (sets the component template). */
   category: Category | "";
   task: Task | "";
   focus: string;

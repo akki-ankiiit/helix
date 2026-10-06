@@ -18,6 +18,7 @@ import { usePlanner } from "../../planner/store";
 import { downloadReport, downloadWorkbook, printReport } from "../../planner/report";
 import { formatDate } from "../../lib/format";
 import { useWorkspace } from "../../stores/workspace";
+import { familyLabel } from "../../planner/families";
 import {
   ApproachTable,
   CompositionChart,
@@ -54,7 +55,7 @@ export function StatusTriplet({ p, status }: { p: Project; status: string }) {
 export function ReviewStep({ p, checks }: { p: Project; checks: Check[] }) {
   const calc = projectCalc(p);
   const summaries: Record<string, string> = {
-    type: `${p.title || "Untitled"} · ${p.category || "no category"} · ${p.task || "no task"}`,
+    type: `${p.title || "Untitled"} · ${familyLabel(p.categoryId, p.subcategoryId) || "no category or family"} · ${p.category || "no formulation type"} · ${p.task || "no task"}`,
     sources: `${p.sources.filter((x) => x.selected).length} selected (${[...new Set(p.sources.filter((x) => x.selected).map((x) => x.kind))].join(", ") || "none"})`,
     describe: `${p.objective || "No objective"} · batch ${fmt(p.batchKg, 2)} kg · ${p.substrates.filter(Boolean).length} substrate(s)`,
     literature: `${p.literature.filter((l) => l.used).length} record(s) used`,
