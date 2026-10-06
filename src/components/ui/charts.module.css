@@ -1,0 +1,266 @@
+.figure {
+  margin: 0;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  min-width: 0;
+}
+.figure figcaption {
+  margin-bottom: 18px;
+}
+.figure figcaption h3 {
+  font-size: 14px;
+}
+.figure figcaption p {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.note {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.values {
+  margin-top: 16px;
+  font-size: 12px;
+}
+.values summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 500;
+  width: max-content;
+  max-width: 100%;
+}
+.valuesWrap {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+.values table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.values th,
+.values td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+.values th {
+  color: var(--muted);
+  font-weight: 500;
+}
+.values .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.key {
+  width: 14px;
+  height: 10px;
+  border-radius: 3px;
+}
+.previous {
+  background: var(--chart-muted);
+}
+.current {
+  background: var(--accent);
+}
+/* Patterned so the benchmark is distinguishable without colour. */
+.reference {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--chart-3) 0 3px,
+    color-mix(in srgb, var(--chart-3) 45%, transparent) 3px 6px
+  );
+}
+.zone {
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--green) 55%, transparent);
+}
+.targetChart {
+  display: flex;
+  flex-direction: column;
+}
+.targetRow {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 18px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+.targetLabel b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.targetLabel small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+}
+.targetBars {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Track geometry is shared with .barLine so the zone lines up. */
+  --label-w: 74px;
+  --value-w: 120px;
+}
+.overlay {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: calc(var(--label-w) + 10px);
+  right: calc(var(--value-w) + 10px);
+  pointer-events: none;
+}
+.overlay .zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+}
+.targetLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 2px solid var(--green);
+}
+.barLine {
+  display: grid;
+  grid-template-columns: var(--label-w) minmax(0, 1fr) var(--value-w);
+  gap: 10px;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+.seriesName {
+  font-size: 12px;
+  color: var(--muted);
+}
+.track {
+  height: 14px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--secondary) 70%, transparent);
+  overflow: hidden;
+}
+.bar {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+.barValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.barValue svg[aria-label="meets target"] {
+  color: var(--green);
+}
+.barValue svg[aria-label="misses target"] {
+  color: var(--red);
+}
+.barList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.barItem {
+  display: grid;
+  grid-template-columns: minmax(120px, 220px) minmax(0, 1fr) 110px;
+  gap: 12px;
+  align-items: center;
+}
+.barItemLabel {
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+}
+.barItemLabel em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 500;
+}
+.barItem .barValue {
+  justify-content: flex-end;
+}
+.breakdown .stack {
+  display: flex;
+  height: 22px;
+  border-radius: 6px;
+  overflow: hidden;
+  gap: 2px;
+}
+.stack span {
+  min-width: 2px;
+}
+.legendList {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px 24px;
+  font-size: 12px;
+}
+.legendList li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.legendList b {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+@media (max-width: 700px) {
+  .figure {
+    padding: 16px;
+  }
+  .targetRow {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .targetBars {
+    --label-w: 58px;
+    --value-w: 96px;
+  }
+  .barItem {
+    grid-template-columns: 1fr 90px;
+  }
+  .barItem .track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .legendList {
+    grid-template-columns: 1fr;
+  }
+}

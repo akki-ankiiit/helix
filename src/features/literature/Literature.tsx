@@ -18,6 +18,8 @@ export function Literature({ project: p }: { project: Project }) {
   const job = state.jobs.find(
     (j) => j.projectId === p.id && j.stage === "Literature",
   );
+  const running = job?.status === "Running" || job?.status === "Queued";
+  const included = p.sources.filter((x) => !x.excluded).length;
   function patch(id: string, changes: Partial<Source>) {
     state.updateProject(p.id, (x) => ({
       ...x,
@@ -27,64 +29,38 @@ export function Literature({ project: p }: { project: Project }) {
   }
   return (
     <div className={s.stack}>
-      <Notice>
-        Demo research simulation · source documents are illustrative fixtures,
-        not real papers or patents. No external search or AI extraction is
-        connected.
-      </Notice>
-      <div className={c.sequence}>
-        {[
-          "Analyse",
-          "Identify",
-          "Strategy",
-          "Search",
-          "Cluster",
-          "Extract",
-        ].map((v, i) => (
-          <span
-            className={
-              p.sources.length || (job && job.progress >= i * 16)
-                ? c.litActive
-                : ""
-            }
-            key={v}
-          >
-            {p.sources.length ? (
-              <Check size={12} />
-            ) : (
-              <span>{String(i + 1).padStart(2, "0")}</span>
-            )}
-            {v}
-            {i < 5 && <ChevronRight size={11} />}
-          </span>
-        ))}
-      </div>
-      {job?.status === "Running" && (
-        <>
-          <div role="status" className={s.skeleton} />
-          <p className={s.muted}>
-            Running a deterministic 6-second demo fixture. This job continues if
-            you leave the page.
-          </p>
-          <div className={s.progress}>
+      <p className={s.muted} style={{ fontSize: 13 }}>
+        Each source shows the excerpt it is based on, so you can check it.
+        Exclude anything that does not apply. In this demo the search returns
+        example documents, not real papers or patents.
+      </p>
+      {running && job && (
+        <div className={s.stack} role="status" aria-live="polite">
+          <p>Searching for sources… this takes about 6 seconds. You can leave this page; it keeps running.</p>
+          <div className={s.progress} role="progressbar" aria-valuenow={job.progress} aria-valuemin={0} aria-valuemax={100} aria-label="Source search progress">
             <span style={{ width: `${job.progress}%` }} />
           </div>
-        </>
+        </div>
       )}
       {job?.status === "Failed" && (
         <Notice warning>
-          {job.error}
+          The source search failed: {job.error} Your existing sources are
+          unchanged.{" "}
           <Button small onClick={() => state.jobAction(job.id, "retry")}>
-            Retry simulation
+            Try again
           </Button>
         </Notice>
       )}
       <div className={s.between}>
-        <h3>{p.sources.length} sources in your evidence set</h3>
+        <h3>
+          {p.sources.length
+            ? `${included} of ${p.sources.length} sources included`
+            : "No sources yet"}
+        </h3>
         <div className={s.row}>
           <label className={s.button}>
             <Upload size={14} />
-            Add source reference
+            Add your own file
             <input
               type="file"
               style={{ display: "none" }}
@@ -115,26 +91,22 @@ export function Literature({ project: p }: { project: Project }) {
             />
           </label>
           <Button
-            variant="primary"
-            disabled={job?.status === "Running"}
+            variant={p.sources.length ? "default" : "primary"}
+            disabled={running}
             onClick={() => state.startJob(p.id, "Literature")}
           >
             <BookOpen size={14} />
-            {p.sources.length
-              ? "Refresh demo research"
-              : "Investigate evidence"}
+            {running ? "Searching…" : p.sources.length ? "Search again" : "Find sources"}
           </Button>
         </div>
       </div>
-      {!p.sources.length && job?.status !== "Running" && (
+      {!p.sources.length && !running && (
         <div className={s.empty}>
           <BookOpen size={28} />
-          <h3>Build an evidence base for your brief.</h3>
+          <h3>Start by finding sources for your brief</h3>
           <p>
-            Inputs: brief v{p.revisions.length}, targets, benchmarks, and
-            constraints.
-            <br />
-            Output: a traceable source set and findings for pathway review.
+            Helix searches using your brief (v{p.revisions.length}): product,
+            targets and benchmarks. Select “Find sources” to begin.
           </p>
         </div>
       )}
@@ -196,15 +168,15 @@ export function Literature({ project: p }: { project: Project }) {
                     marginTop: 15,
                   }}
                 >
-                  View finding & supporting excerpt
+                  Show the excerpt
                 </summary>
                 <blockquote>“{source.excerpt}”</blockquote>
                 <p>
                   <b>Source reports:</b> {source.summary}
                 </p>
                 <p>
-                  <b>Demo inference:</b> Use this source to frame a controlled
-                  experiment; it does not establish performance or causality.
+                  <b>How to use it:</b> as a starting idea for a trial. It does
+                  not prove that a recipe will work.
                 </p>
                 <small className={s.muted}>
                   [{source.reference}] · {source.quality}
@@ -216,9 +188,9 @@ export function Literature({ project: p }: { project: Project }) {
       </div>
       {p.sources.length > 0 && (
         <Notice warning>
-          Missing evidence: no verified papers, patent records, or aged
-          durability results are attached. Fixture citations support
-          demonstration only.
+          Gap: no verified papers, patents or long-term (aged) durability
+          results are attached. The example sources are for demonstration
+          only.
         </Notice>
       )}
       {open && (

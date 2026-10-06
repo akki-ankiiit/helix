@@ -12,6 +12,8 @@ import {
 } from "../../components/ui";
 import { useWorkspace, uid } from "../../stores/workspace";
 import { evaluate } from "../../domain/calculations";
+import { formatINR, formatMeasured, formatNumber } from "../../lib/format";
+import { Empty, Reason } from "../../components/ui";
 import { propertyFor } from "../../data/property-library";
 import c from "../projects/Project.module.css";
 export function Analysis({
@@ -41,6 +43,18 @@ export function Analysis({
   const canEdit = ["Chemist", "Admin"].includes(state.user?.role || "");
   const proposed = Number(cellulose),
     old = trial?.percentages.cellulose || 0;
+  const priceOf = (id: string) => {
+    const m = (trial?.materialsSnapshot || state.materials).find((x) => x.id === id);
+    return m && m.price !== null && m.currency === "INR" ? m.price : null;
+  };
+  const celluloseP = priceOf("cellulose"),
+    fillerP = priceOf("filler");
+  const costChange =
+    celluloseP !== null && fillerP !== null
+      ? ((proposed - old) / 100) * (celluloseP - fillerP)
+      : null;
+  const resultsFor = (id: string) =>
+    p.results.find((r) => r.trialId === trialId && r.propertyId === id)?.readings || [];
   function accept() {
     if (!trial) return;
     const percentages = {
@@ -93,25 +107,24 @@ export function Analysis({
   }
   return (
     <div className={s.stack}>
-      <Notice>
-        Evaluation uses the configured operator, unit, test method, and
-        conditions. No default “borderline” tolerance is assumed. Blank or
-        incompatible evidence is not a pass.
-      </Notice>
-      {p.needsReview && (
+      <p className={s.muted} style={{ fontSize: 13 }}>
+        A result is only judged when it uses the same unit, test method and
+        conditions as its target. Missing or mismatched results never count as
+        a pass.
+      </p>
+      {p.needsReview && p.results.length > 0 && (
         <Notice warning>
-          Downstream review needed: inputs or results have changed. A reviewer
-          must reconcile the evidence before final approval.
+          Something changed after the last review (brief, recipe or prices). A
+          Reviewer must check the results again before approval.
         </Notice>
       )}
       {!p.trials.length ? (
-        <div className={s.empty}>
-          No trial evidence is available yet. Plan trials and enter specimen
-          readings first.
-        </div>
+        <Empty title="Nothing to analyse yet">
+          <p>Add a trial and record its results first.</p>
+        </Empty>
       ) : (
         <>
-          <Field label="Compare trial revision">
+          <Field label="Trial to analyse">
             <select
               value={trialId}
               onChange={(e) => setTrialId(e.target.value)}
@@ -126,7 +139,9 @@ export function Analysis({
           <div className={c.evaluation}>
             {["Pass", "Fail", "Pending", "Not evaluated"].map((status) => (
               <div key={status}>
-                <small>{status}</small>
+                <small>
+                  {{ Pass: "Meet target", Fail: "Miss target", Pending: "Awaiting readings", "Not evaluated": "Cannot compare" }[status]}
+                </small>
                 <strong
                   style={{
                     color:
@@ -146,13 +161,13 @@ export function Analysis({
             <table className={s.table}>
               <thead>
                 <tr>
-                  <th>Property</th>
-                  <th>Target</th>
-                  <th>Benchmark fixture</th>
-                  <th>Prediction estimate</th>
-                  <th>Measured fixture</th>
-                  <th>Δ from lower target</th>
-                  <th>Evaluation</th>
+                  <th scope="col">Test</th>
+                  <th scope="col" className={s.num}>Target</th>
+                  <th scope="col" className={s.num}>Benchmark</th>
+                  <th scope="col" className={s.num}>Estimate</th>
+                  <th scope="col" className={s.num}>Measured mean</th>
+                  <th scope="col" className={s.num}>Difference from target</th>
+                  <th scope="col">Result</th>
                 </tr>
               </thead>
               <tbody>
@@ -164,13 +179,13 @@ export function Analysis({
                         {a.target.unit} · {a.target.priority}
                       </small>
                     </td>
-                    <td>
+                    <td className={s.num}>
                       {a.target.operator} {a.target.value}
                       {a.target.operator === "Between"
                         ? ` – ${a.target.max}`
                         : ""}
                     </td>
-                    <td>
+                    <td className={s.num}>
                       {p.brief.benchmarkIds
                         .map(
                           (id) =>
@@ -180,15 +195,17 @@ export function Analysis({
                         )
                         .join(" / ") || "—"}
                     </td>
-                    <td>
+                    <td className={s.num}>
                       {p.pathways.find((x) => x.id === p.selectedPathway)
-                        ?.predictions[a.propertyId] ?? "Insufficient data"}
+                        ?.predictions[a.propertyId] ?? "—"}
                     </td>
-                    <td>{a.mean === null ? "Pending" : a.mean.toFixed(3)}</td>
-                    <td>
+                    <td className={s.num}>
+                      {formatMeasured(a.mean, resultsFor(a.propertyId))}
+                    </td>
+                    <td className={s.num}>
                       {a.difference === null
                         ? "—"
-                        : `${a.difference > 0 ? "+" : ""}${a.difference.toFixed(3)}`}
+                        : `${a.difference > 0 ? "+" : a.difference < 0 ? "−" : ""}${formatMeasured(Math.abs(a.difference), resultsFor(a.propertyId))}`}
                     </td>
                     <td>
                       <Status value={a.status} />
@@ -203,55 +220,55 @@ export function Analysis({
               <div className={s.between}>
                 <div className={s.row}>
                   <GitBranch size={18} color="var(--accent)" />
-                  <h3>A focused next experiment</h3>
+                  <h3>Proposed next trial</h3>
                 </div>
                 <Badge tone="amber">
-                  Illustrative proposal · low confidence
+                  Suggestion · low confidence
                 </Badge>
               </div>
               <p>
-                Investigate a small cellulose-ether increase while holding the
-                dry-blend total constant. This is an experiment proposal, not a
+                Try a little more cellulose ether (it thickens the mix and can
+                reduce slip), taking the same amount out of the limestone filler
+                so the total stays at 100%. This is something to test, not a
                 guaranteed fix.
               </p>
               <div className={s.tableWrap} style={{ marginTop: 18 }}>
                 <table className={s.table}>
                   <thead>
                     <tr>
-                      <th>Ingredient</th>
-                      <th>Previous</th>
-                      <th>Proposed</th>
-                      <th>Expected direction</th>
+                      <th scope="col">Ingredient</th>
+                      <th scope="col" className={s.num}>Now (dry wt %)</th>
+                      <th scope="col" className={s.num}>Proposed (dry wt %)</th>
+                      <th scope="col">Why</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td>Cellulose ether</td>
-                      <td>{old.toFixed(2)}%</td>
-                      <td>{proposed.toFixed(2)}%</td>
-                      <td>Test fresh-state slip response</td>
+                      <td className={s.num}>{formatNumber(old)}</td>
+                      <td className={s.num}>{formatNumber(proposed)}</td>
+                      <td>Check whether slip falls</td>
                     </tr>
                     <tr>
                       <td>Limestone filler</td>
-                      <td>{trial.percentages.filler?.toFixed(2)}%</td>
-                      <td>
-                        {(
-                          (trial.percentages.filler || 0) -
-                          (proposed - old)
-                        ).toFixed(2)}
-                        %
+                      <td className={s.num}>{formatNumber(trial.percentages.filler ?? 0)}</td>
+                      <td className={s.num}>
+                        {formatNumber((trial.percentages.filler || 0) - (proposed - old))}
                       </td>
-                      <td>Balance dry-blend composition</td>
+                      <td>Keeps the total at 100%</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
               <p>
-                Rationale: controlled rheology experiment [HELIX-FIXTURE-002].
-                Estimated cost change: USD{" "}
-                {(((proposed - old) / 100) * (5.2 - 0.07)).toFixed(4)}/kg using
-                fixture prices. Check water demand and working time. Material
-                limits and the cost ceiling must still pass.
+                Estimated cost change:{" "}
+                <b>
+                  {costChange === null
+                    ? "unknown (a price is missing)"
+                    : `${costChange >= 0 ? "+" : "−"}${formatINR(Math.abs(costChange))}/kg`}
+                </b>
+                , using current library prices. Also check water demand and
+                working time. Source: HELIX-FIXTURE-002.
               </p>
               {p.iterationRejected ? (
                 <Notice warning>
@@ -299,28 +316,31 @@ export function Analysis({
               )}
             </div>
           )}
+          {!canEdit && fail && (
+            <Reason>Only a Chemist or Admin can accept or reject the proposal. Change your demo role in Settings.</Reason>
+          )}
           {!fail && assessments.every((a) => a.status === "Pass") && (
             <Notice>
-              All configured targets pass for this trial. Results still require
-              independent review. No broader standard compliance is implied.
+              This trial meets every target. A Reviewer still needs to check the
+              results. Meeting your targets does not prove compliance with any
+              standard.
             </Notice>
           )}
-          <details className={s.details}>
-            <summary>Traceability & interpretation</summary>
-            <p>
-              Previous recipes and their specimen results are retained. Baseline
-              T01 in the seeded project fails the slip target (0.68 mm vs ≤ 0.50
-              mm); its later T02 fixture records 0.38 mm. That example does not
-              establish causality or validate the chemistry.
-            </p>
-          </details>
+          {fail && p.brief.subcategoryId !== "tile-0" && (
+            <Notice warning>
+              A target is missed. This demo has no proposal model for this
+              product family, so plan the next trial manually in Design · Trial
+              plan.
+            </Notice>
+          )}
         </>
       )}
       {edit && (
         <Modal title="Edit iteration proposal" onClose={() => setEdit(false)}>
           <Field
-            label="Proposed cellulose ether · dry wt %"
-            hint="Filler adjustment is shown in the preview; nothing changes until accepted."
+            label="Proposed cellulose ether"
+            unit="dry wt %"
+            hint="Allowed 0–1%. The filler changes by the same amount. Nothing is saved until you accept."
           >
             <input
               type="number"
@@ -333,7 +353,7 @@ export function Analysis({
           </Field>
           <div className={s.modalActions}>
             <Button variant="primary" onClick={() => setEdit(false)}>
-              Review proposal
+              Update proposal
               <ArrowRight size={14} />
             </Button>
           </div>

@@ -3,41 +3,47 @@ import {
   NavLink,
   Outlet,
   Link,
+  matchPath,
   useLocation,
   useNavigate,
+  useSearchParams,
 } from "react-router-dom";
 import {
-  Boxes,
   FolderOpen,
-  BookOpen,
-  Layers3,
   FileChartColumn,
-  ListTodo,
   Settings,
   CircleHelp,
   Search,
-  ChevronRight,
-  ChevronsUpDown,
-  Bell,
   LogOut,
   Sparkles,
   Menu,
   X,
-  FlaskConical,
 } from "lucide-react";
 import { Brand } from "../ui/Brand";
-import { Badge, Button, Modal, SearchBox, ThemeControl, s } from "../ui";
+import { Badge, Breadcrumbs, Button, Modal, SearchBox, s } from "../ui";
 import { useWorkspace } from "../../stores/workspace";
 import { AskHelix } from "../../features/ask-helix/AskHelix";
+import { useAllProjects } from "../../planner/store";
+import { pathwaySubsteps, workflow } from "../../planner/model";
 import c from "./Shell.module.css";
-const navigation = [
-  ["/projects", "Projects", FolderOpen],
-  ["/benchmarks", "Benchmarks", BookOpen],
-  ["/raw-materials", "Raw materials", Boxes],
-  ["/templates", "Templates", Layers3],
-  ["/reports", "Reports", FileChartColumn],
-  ["/tasks", "Task queue", ListTodo],
+
+const groups = [
+  {
+    label: "Work",
+    items: [
+      ["/projects", "Projects", FolderOpen],
+      ["/reports", "Reports", FileChartColumn],
+    ],
+  },
 ] as const;
+
+const sectionTitles: Record<string, string> = {
+  "/projects": "Projects",
+  "/reports": "Reports",
+  "/settings": "Settings",
+  "/onboarding/mode": "Choose your view",
+};
+
 export function Shell() {
   const state = useWorkspace();
   const [ask, setAsk] = useState(false),
@@ -46,18 +52,37 @@ export function Shell() {
     [mobile, setMobile] = useState(false),
     [help, setHelp] = useState(false);
   const location = useLocation(),
-    navigate = useNavigate();
-  const isIntake =
-    location.pathname.includes("/new/") ||
-    location.pathname.includes("/onboarding/");
-  const title = isIntake
-    ? "New formulation"
-    : navigation.find(([p]) => location.pathname.startsWith(p))?.[1] ||
-      "Settings";
+    navigate = useNavigate(),
+    [params] = useSearchParams();
+  const allProjects = useAllProjects();
+  const projectMatch =
+    matchPath("/projects/:projectId/pathways/:sub", location.pathname) ||
+    matchPath("/projects/:projectId/:step", location.pathname) ||
+    matchPath("/projects/:projectId", location.pathname);
+  const projectId = projectMatch?.params.projectId;
+  const project =
+    projectId && projectId !== "new" ? allProjects.find((p) => p.id === projectId) : undefined;
+  const params0 = projectMatch?.params as { step?: string; sub?: string } | undefined;
+
+  // Breadcrumbs only where a real parent page exists.
+  const crumbs =
+    projectId && projectId !== "new"
+      ? [
+          { label: "Projects", to: "/projects" },
+          { label: project ? `${project.id} · ${project.title || "Untitled project"}` : "Project not found" },
+        ]
+      : null;
+
   useEffect(() => {
-    const interval = setInterval(() => useWorkspace.getState().tick(), 350);
-    return () => clearInterval(interval);
-  }, []);
+    const step = workflow.find((w) => w.id === (params0?.sub ? "pathways" : params0?.step));
+    const sub = pathwaySubsteps.find((x) => x.id === params0?.sub);
+    const title = project
+      ? `${step ? `${step.name}${sub ? ` · ${sub.short}` : ""} · ` : ""}${project.title || "Untitled project"}`
+      : projectId && projectId !== "new"
+        ? "Project not found"
+        : sectionTitles[location.pathname] || "Helix";
+    document.title = `${title} · Helix`;
+  }, [location.pathname, project, projectId, params0?.step, params0?.sub]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -74,84 +99,122 @@ export function Shell() {
   }, []);
   useEffect(() => {
     setMobile(false);
+    window.scrollTo({ top: 0 });
   }, [location.pathname]);
-  const running = state.jobs.filter((j) => j.status === "Running").length;
+
+  const q = query.toLowerCase();
+  const results = allProjects
+    .map((p) => ({
+      name: `${p.id} · ${p.title || "Untitled project"}`,
+      detail: p.category,
+      to: `/projects/${p.id}`,
+      type: p.reference ? "Reference project" : "My project",
+    }))
+    .filter((x) => `${x.name} ${x.detail}`.toLowerCase().includes(q));
+
   return (
     <div className={c.shell}>
-      <aside className={`${c.sidebar} ${mobile ? c.open : ""}`}>
+      <a href="#main" className={c.skip}>
+        Skip to content
+      </a>
+      {mobile && (
+        <div
+          className={c.scrim}
+          aria-hidden="true"
+          onClick={() => setMobile(false)}
+        />
+      )}
+      <aside
+        id="sidebar"
+        className={`${c.sidebar} ${mobile ? c.open : ""}`}
+        aria-label="Main navigation"
+      >
         <div className={c.brand}>
-          <Link to="/projects">
+          <Link to="/projects" aria-label="Helix home">
             <Brand />
           </Link>
+          <Button
+            variant="ghost"
+            className={c.closeMenu}
+            aria-label="Close navigation"
+            onClick={() => setMobile(false)}
+          >
+            <X size={18} />
+          </Button>
         </div>
-        <div className={c.workspace}>
-          <span className={c.workspaceIcon}>
-            <FlaskConical size={15} />
-          </span>
-          <div>
-            <strong>Materials Lab</strong>
-            <small>Organization workspace</small>
-          </div>
-          <ChevronsUpDown
-            size={12}
-            style={{ marginLeft: "auto", color: "var(--muted)" }}
-          />
-        </div>
-        <div className={c.label}>WORKSPACE</div>
         <nav className={c.nav}>
-          {navigation.map(([path, label, Icon]) => (
-            <NavLink
-              key={path}
-              to={path}
-              className={({ isActive }) => (isActive ? c.active : "")}
-            >
-              <Icon size={17} strokeWidth={1.6} />
-              {label}
-              {label === "Projects" && (
-                <span className={c.count}>{state.projects.length}</span>
-              )}
-              {label === "Task queue" && running > 0 && (
-                <span className={c.count}>{running}</span>
-              )}
-            </NavLink>
+          {groups.map((group) => (
+            <div key={group.label}>
+              <div className={c.label}>{group.label}</div>
+              {group.items.map(([path, label, Icon]) => (
+                <NavLink
+                  key={path}
+                  to={path}
+                  className={({ isActive }) =>
+                    isActive ||
+                    (path === "/projects" &&
+                      location.pathname.startsWith("/onboarding"))
+                      ? c.active
+                      : ""
+                  }
+                >
+                  <Icon size={17} strokeWidth={1.7} aria-hidden="true" />
+                  {label}
+                  {path === "/projects" && (
+                    <span className={c.count} aria-label={`${allProjects.length} projects`}>
+                      {allProjects.length}
+                    </span>
+                  )}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
         <div className={c.bottom}>
-          <Link to="/settings" className={c.bottomLink}>
-            <Settings size={17} />
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `${c.bottomLink} ${isActive ? c.active : ""}`
+            }
+          >
+            <Settings size={17} aria-hidden="true" />
             Settings
-          </Link>
+          </NavLink>
           <button className={c.bottomLink} onClick={() => setHelp(true)}>
-            <CircleHelp size={17} />
-            Help & resources
+            <CircleHelp size={17} aria-hidden="true" />
+            How Helix works
           </button>
-          <div className={c.demoCard}>
-            <strong>
-              <FlaskConical size={13} />
-              Demo workspace
-            </strong>
-            <p>
-              A space to explore. All research and laboratory data is
-              illustrative.
-            </p>
-          </div>
+          <p className={c.demoNote}>
+            <b>Demo workspace.</b> All research, lab data and prices are
+            illustrative.
+          </p>
           <div className={c.user}>
-            <div className={c.avatar}>AM</div>
+            <div className={c.avatar} aria-hidden="true">
+              {(state.user?.name || "D U")
+                .split(" ")
+                .map((x) => x[0])
+                .join("")
+                .slice(0, 2)}
+            </div>
             <div>
               {state.user?.name}
-              <small>{state.user?.role} · local session</small>
+              <small>
+                Demo user · data saved in this browser
+              </small>
             </div>
-            <button
-              className={s.plainButton}
-              style={{ marginLeft: "auto", color: "var(--muted)" }}
+            <Button
+              variant="ghost"
+              small
               aria-label="Sign out"
+              title="Sign out"
+              style={{ marginLeft: "auto" }}
               onClick={() => {
                 state.logout();
                 navigate("/login");
               }}
             >
               <LogOut size={15} />
-            </button>
+            </Button>
           </div>
         </div>
       </aside>
@@ -159,74 +222,46 @@ export function Shell() {
         <Button
           variant="ghost"
           className={c.mobileMenu}
-          aria-label="Toggle navigation"
-          onClick={() => setMobile(!mobile)}
+          aria-label="Open navigation"
+          aria-expanded={mobile}
+          aria-controls="sidebar"
+          onClick={() => setMobile(true)}
         >
-          {mobile ? <X size={18} /> : <Menu size={18} />}
+          <Menu size={18} />
         </Button>
-        <div className={c.breadcrumbs}>
-          <span>Workspace</span>
-          <ChevronRight size={12} />
-          <b>{title}</b>
-          {location.pathname.match(/^\/projects\/[^/]+$/) && !isIntake && (
-            <>
-              <ChevronRight size={12} />
-              <span>Formulation</span>
-            </>
-          )}
-        </div>
+        {!crumbs && (
+          <Link to="/projects" className={c.mobileBrand} aria-label="Helix home">
+            <Brand />
+          </Link>
+        )}
+        <div className={c.crumbs}>{crumbs && <Breadcrumbs items={crumbs} />}</div>
         <div className={c.topActions}>
-          <button className={c.searchButton} onClick={() => setSearch(true)}>
-            <Search size={15} />
-            <span>Search workspace</span>
+          <button
+            className={c.searchButton}
+            onClick={() => setSearch(true)}
+            aria-label="Search projects"
+          >
+            <Search size={15} aria-hidden="true" />
+            <span>Search</span>
             <kbd>⌘ K</kbd>
           </button>
-          <select
-            className={c.modeSelect}
-            aria-label="Presentation mode"
-            value={state.user?.mode || "Scientist"}
-            onChange={(e) =>
-              state.setMode(e.target.value as "Scientist" | "Non-scientist")
-            }
+          <Button
+            small
+            className={c.askButton}
+            aria-label="Ask Helix"
+            aria-pressed={ask}
+            onClick={() => setAsk(!ask)}
           >
-            <option>Scientist</option>
-            <option>Non-scientist</option>
-          </select>
-          <ThemeControl />
-          <Link
-            to="/tasks"
-            aria-label={`${running} running jobs`}
-            style={{ position: "relative", display: "flex" }}
-          >
-            <Bell size={17} />
-            {running > 0 && (
-              <span
-                style={{
-                  position: "absolute",
-                  width: 6,
-                  height: 6,
-                  background: "var(--accent)",
-                  borderRadius: "50%",
-                  right: 0,
-                  top: -2,
-                }}
-              />
-            )}
-          </Link>
-          <Link to="/settings" className={c.avatar} aria-label="User profile">
-            AM
-          </Link>
+            <Sparkles size={15} aria-hidden="true" />
+            <span>Ask Helix</span>
+          </Button>
         </div>
       </header>
-      <main className={c.main}>
+      <main className={c.main} id="main" tabIndex={-1}>
         <Suspense
           fallback={
-            <div
-              className={s.stack}
-              role="status"
-              aria-label="Loading workspace"
-            >
-              <div className={s.skeleton} />
+            <div className={s.stack} role="status" aria-live="polite">
+              <span className={s.srOnly}>Loading page…</span>
               <div className={s.skeleton} />
               <div className={s.skeleton} />
             </div>
@@ -235,21 +270,18 @@ export function Shell() {
           <Outlet />
         </Suspense>
       </main>
-      <button className={c.askButton} onClick={() => setAsk(!ask)}>
-        <Sparkles size={16} />
-        Ask Helix
-      </button>
-      {ask && <AskHelix onClose={() => setAsk(false)} />}{" "}
+      {ask && <AskHelix onClose={() => setAsk(false)} />}
       {state.notification && (
-        <div role="status" className={s.toast} style={{ bottom: 85 }}>
+        <div role="status" aria-live="polite" className={s.toast}>
           <span>{state.notification}</span>
-          {/simulation/.test(state.notification) && (
+          {state.notificationLink && (
             <Link
-              to="/tasks"
+              to={state.notificationLink.to}
               onClick={() => state.notify("")}
-              style={{ color: "var(--accent)", whiteSpace: "nowrap" }}
+              className={s.textLink}
+              style={{ whiteSpace: "nowrap", fontSize: 13 }}
             >
-              Review results
+              {state.notificationLink.label}
             </Link>
           )}
           <Button
@@ -263,81 +295,57 @@ export function Shell() {
         </div>
       )}
       {search && (
-        <Modal title="Search your workspace" onClose={() => setSearch(false)}>
+        <Modal title="Search Helix" onClose={() => setSearch(false)}>
           <SearchBox
             value={query}
             onChange={setQuery}
-            placeholder="Search projects, benchmarks, and materials"
+            placeholder="Search by project or category"
           />
           <div style={{ marginTop: 16 }}>
-            {[
-              ...state.projects.map((p) => ({
-                name: p.brief.name,
-                to: `/projects/${p.id}`,
-                type: "Project",
-              })),
-              ...state.benchmarks.map((b) => ({
-                name: b.name,
-                to: "/benchmarks",
-                type: "Benchmark",
-              })),
-              ...state.materials.map((m) => ({
-                name: m.name,
-                to: "/raw-materials",
-                type: "Raw material",
-              })),
-            ]
-              .filter((x) => x.name.toLowerCase().includes(query.toLowerCase()))
-              .map((x) => (
-                <Link
-                  key={x.name}
-                  className={c.searchResult}
-                  to={x.to}
-                  onClick={() => setSearch(false)}
-                >
-                  <span>{x.name}</span>
-                  <Badge>{x.type}</Badge>
-                </Link>
-              ))}
+            {results.map((x) => (
+              <Link
+                key={x.to}
+                className={c.searchResult}
+                to={x.to}
+                onClick={() => setSearch(false)}
+              >
+                <span>{x.name}{x.detail && <small style={{ display: "block", color: "var(--muted)" }}>{x.detail}</small>}</span>
+                <Badge>{x.type}</Badge>
+              </Link>
+            ))}
           </div>
-          {query &&
-            !state.projects.some((p) =>
-              p.brief.name.toLowerCase().includes(query.toLowerCase()),
-            ) &&
-            !state.benchmarks.some((b) =>
-              b.name.toLowerCase().includes(query.toLowerCase()),
-            ) &&
-            !state.materials.some((m) =>
-              m.name.toLowerCase().includes(query.toLowerCase()),
-            ) && (
-              <p className={s.empty}>
-                No matching records. Try another search.
-              </p>
-            )}
+          {!results.length && (
+            <p className={s.empty}>
+              Nothing matches “{query}”. Try a shorter word.
+            </p>
+          )}
         </Modal>
       )}
       {help && (
-        <Modal
-          title="A workspace for considered decisions"
-          onClose={() => setHelp(false)}
-        >
+        <Modal title="How Helix works" onClose={() => setHelp(false)}>
           <div className={s.stack}>
-            <p>
-              Start with <b>New formulation</b>, define a brief, then move
-              through literature, pathways, trials, measured results, and
-              review.
+            <p>Every project follows seven steps:</p>
+            <ol className={c.helpList}>
+              {workflow.map((step) => (
+                <li key={step.id}>
+                  <b>{step.name}</b> — {step.purpose}
+                </li>
+              ))}
+            </ol>
+            <p className={s.muted}>
+              Pathways has five parts: analysing formulation pathways,
+              identifying formulation components, composition and ratios,
+              process conditions, and the experiment structure.
             </p>
             <p className={s.muted}>
-              Use ⌘ / Ctrl K to search. Switch presentation mode at any time
-              without losing project data. Every demo change is saved in this
-              browser.
+              Helix supports construction-chemical formulation: tile cleaners,
+              tile adhesives, epoxy grouts and adhesives, and waterproofing
+              coatings. Open a <b>reference sample</b> to see a completed
+              development plan, then use it as a starting point for your own
+              copy. Your work is saved in this browser. Press ⌘ K (Ctrl K on
+              Windows) to search.
             </p>
-            <Badge tone="amber">No live AI or backend services</Badge>
-            <p className={s.muted}>
-              Standards, fixture recipes, and test methods need qualified R&D
-              confirmation. Role controls demonstrate the workflow; production
-              authorization belongs on the server.
-            </p>
+            <Badge tone="amber">Plans only: Helix does not test formulations</Badge>
           </div>
         </Modal>
       )}

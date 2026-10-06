@@ -7,7 +7,13 @@
 .story {
   margin: 18px 0 18px 18px;
   border-radius: 14px;
-  background: #f0f0f6;
+  background:
+    radial-gradient(
+      110% 85% at 88% -12%,
+      color-mix(in srgb, var(--accent) 9%, transparent),
+      transparent 55%
+    ),
+    #f0f0f6;
   position: relative;
   overflow: hidden;
   padding: 47px 58px 30px;
@@ -16,7 +22,13 @@
   min-height: 550px;
 }
 :global([data-theme="dark"]) .story {
-  background: #1d1c28;
+  background:
+    radial-gradient(
+      110% 85% at 88% -12%,
+      color-mix(in srgb, var(--accent) 8%, transparent),
+      transparent 55%
+    ),
+    #1d1c28;
 }
 .story::before {
   content: "";
@@ -141,11 +153,12 @@
   justify-content: center;
   width: 42px;
   height: 42px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
+  border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+  background: var(--accent-soft);
   color: var(--accent);
   margin-bottom: 23px;
-  box-shadow: 0 2px 5px #20124204;
+  box-shadow: 0 2px 5px #20124208;
 }
 .formContainer h2 {
   font-size: 28px;
@@ -211,6 +224,18 @@
   width: 100%;
   justify-content: space-between !important;
   padding-left: 17px !important;
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, #fff 12%, transparent),
+    transparent
+  );
+}
+.submit:not(:disabled):hover {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, #fff 12%, transparent),
+    transparent
+  );
 }
 .or {
   display: flex;

@@ -7,13 +7,10 @@ export function Benchmarks() {
     <>
       <div className={s.pageHeader}>
         <div>
-          <div className={s.eyebrow} style={{ marginBottom: 10 }}>
-            CONTEXT FOR YOUR NEXT MATERIAL
-          </div>
-          <h1>Benchmark library</h1>
+          <h1>Benchmarks</h1>
           <p>
-            Reference products with clear provenance, versions, and a place in
-            the evidence.
+            Existing products to compare your results against. Each shows where
+            its values came from (data sheet, lab test or manual entry).
           </p>
         </div>
         <Badge>{count} reference records</Badge>

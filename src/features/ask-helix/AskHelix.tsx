@@ -1,28 +1,76 @@
 import { useState } from "react";
 import { Send, Sparkles, X, ArrowRight } from "lucide-react";
-import { useLocation, useParams } from "react-router-dom";
+import { matchPath, useLocation } from "react-router-dom";
 import { Button, Badge, Notice, s } from "../../components/ui";
-import { askHelix } from "../../services/demo";
-import type { AskResponse } from "../../services/contracts";
-import { useWorkspace, uid } from "../../stores/workspace";
+import { useAllProjects } from "../../planner/store";
+import type { Project } from "../../planner/model";
+import { fmt, planSummary, projectCalc, recommendations, validationStatus } from "../../planner/calc";
 import c from "./AskHelix.module.css";
+
+interface Answer {
+  prompt: string;
+  answer: string;
+  citation: string;
+}
+
+const prompts = [
+  "Summarise this formulation plan.",
+  "Is the composition balanced?",
+  "Which supplier data is missing?",
+  "Why was this approach chosen?",
+  "What tests are still to be done?",
+];
+
+/** Deterministic answers built only from the open project's saved data. */
+function answer(prompt: string, p?: Project): Omit<Answer, "prompt"> {
+  if (!p)
+    return {
+      answer: "Open a project to ask about its formulation plan. Answers come only from the project's saved data; no AI service is connected.",
+      citation: "No project open",
+    };
+  const calc = projectCalc(p);
+  const sum = planSummary(p, calc);
+  const q = prompt.toLowerCase();
+  if (/balanc|composition|total|ratio/.test(q))
+    return {
+      answer:
+        calc.parts.map((x) => `${x.name}: ${fmt(x.total, 2)}%${x.balanced ? " (balanced)" : x.missing.length ? ` — ${x.missing.length} amount(s) missing` : " — not 100%"}; ${fmt(x.massKg, 2)} kg in a ${fmt(p.batchKg, 2)} kg batch.`).join(" ") +
+        (calc.mixRatioText ? ` Mixing ratio ${calc.mixRatioText}.` : "") +
+        calc.ratios.map((r) => ` ${r.label}: ${fmt(r.value, 2)}.`).join(""),
+      citation: `${p.id} · Pathways › Composition and ratios (calculated)`,
+    };
+  if (/supplier|missing|data/.test(q)) {
+    const needs = p.ingredients.filter((i) => i.review === "Needs supplier data");
+    return {
+      answer: needs.length ? `Supplier data is still needed for: ${needs.map((i) => i.name).join(", ")}.` : "Every ingredient has a supporting source or a stated basis.",
+      citation: `${p.id} · formulation table (review status)`,
+    };
+  }
+  if (/why|approach/.test(q))
+    return { answer: p.rationale || "No rationale yet. Add one in Pathways › Analyzing formulation pathways.", citation: `${p.id} · ${sum.approach?.name ?? "no approach selected"}` };
+  if (/test|valid/.test(q))
+    return {
+      answer: `${p.tests.length} tests across ${p.trials.length} trial batches. Experimental validation: ${validationStatus(p).toLowerCase()}. ${recommendations(p, calc).find((r) => r.action.sub === "experiment")?.text ?? ""}`,
+      citation: `${p.id} · performance-testing matrix`,
+    };
+  return {
+    answer: `${sum.headline}. ${sum.explanation}`,
+    citation: `${p.id} · ${p.sources.filter((x) => x.selected).length} selected sources`,
+  };
+}
+
 export function AskHelix({ onClose }: { onClose: () => void }) {
-  const { projectId } = useParams();
   const location = useLocation();
-  const state = useWorkspace();
-  const p = state.projects.find((p) => p.id === projectId);
+  const all = useAllProjects();
+  const match =
+    matchPath("/projects/:projectId/*", location.pathname) || matchPath("/projects/:projectId", location.pathname);
+  const p = all.find((x) => x.id === match?.params.projectId);
   const [input, setInput] = useState(""),
-    [busy, setBusy] = useState(false),
-    [messages, setMessages] = useState<
-      (AskResponse & { prompt: string; resolved?: string })[]
-    >([]);
-  async function ask(prompt: string) {
-    if (!prompt.trim() || busy) return;
+    [messages, setMessages] = useState<Answer[]>([]);
+  function ask(prompt: string) {
+    if (!prompt.trim()) return;
     setInput("");
-    setBusy(true);
-    const response = await askHelix.ask(prompt, p);
-    setMessages((m) => [...m, { ...response, prompt }]);
-    setBusy(false);
+    setMessages((m) => [...m, { prompt, ...answer(prompt, p) }]);
   }
   return (
     <aside className={c.panel} aria-label="Ask Helix">
@@ -30,148 +78,32 @@ export function AskHelix({ onClose }: { onClose: () => void }) {
         <div className={s.row}>
           <Sparkles size={19} color="var(--accent)" />
           <h2>Ask Helix</h2>
-          <Badge tone="violet">Demo</Badge>
+          <Badge tone="violet">From project data</Badge>
         </div>
         <Button variant="ghost" aria-label="Close Ask Helix" onClick={onClose}>
           <X size={18} />
         </Button>
       </header>
       <div className={c.context}>
-        {p?.brief.name || "Your materials workspace"}
-        <small>
-          {state.user?.mode || "Choose your mode"} ·{" "}
-          {new URLSearchParams(location.search).get("stage") ||
-            p?.stage ||
-            "Getting started"}
-        </small>
+        {p ? `${p.id} · ${p.title || "Untitled project"}` : "No project open"}
+        <small>{p?.category || "Open a project to ask about it"}</small>
       </div>
-      <div className={c.messages}>
-        <Notice>
-          Deterministic demo responses grounded in local records. No live AI
-          service is connected.
-        </Notice>
-        {messages.length === 0 && (
-          <>
-            <div className={c.welcome}>
-              <Sparkles size={27} />
-              <h2>
-                A little clarity for
-                <br />
-                your next decision.
-              </h2>
-              <p>
-                Explore the evidence, understand a result,
-                <br />
-                or find your next step.
-              </p>
-            </div>
-            {[
-              "Summarize this formulation brief.",
-              "Which targets are not yet met?",
-              "Compare these pathways.",
-              "Explain why this trial failed.",
-              "Suggest a lower-cost variant.",
-            ].map((q) => (
-              <button key={q} className={c.prompt} onClick={() => ask(q)}>
-                {q}
-                <ArrowRight size={13} />
-              </button>
-            ))}
-          </>
-        )}
+      <div className={c.messages} aria-live="polite">
+        <Notice>Answers are built only from this project's saved data. No AI service is connected.</Notice>
+        {messages.length === 0 &&
+          prompts.map((q) => (
+            <button key={q} className={c.prompt} onClick={() => ask(q)}>
+              {q}
+              <ArrowRight size={13} />
+            </button>
+          ))}
         {messages.map((m, i) => (
           <div key={i} className={c.message}>
             <div className={c.question}>{m.prompt}</div>
             <p>{m.answer}</p>
             <small>{m.citation}</small>
-            {m.change && (
-              <div className={c.change}>
-                <b>Proposed brief revision</b>
-                <p>Before: {m.change.before}</p>
-                <p>After: {m.change.after}</p>
-                {m.resolved ? (
-                  <Badge>{m.resolved}</Badge>
-                ) : (
-                  <div className={s.row}>
-                    <Button
-                      small
-                      variant="primary"
-                      disabled={
-                        !["Chemist", "Admin"].includes(state.user?.role || "")
-                      }
-                      onClick={() => {
-                        if (p)
-                          state.updateProject(p.id, (x) => {
-                            const brief = {
-                              ...x.brief,
-                              constraints: {
-                                ...x.brief.constraints,
-                                preference: m.change!.after,
-                              },
-                            };
-                            return {
-                              ...x,
-                              brief,
-                              needsReview: true,
-                              revisions: [
-                                ...x.revisions,
-                                {
-                                  version: x.revisions.length + 1,
-                                  brief: structuredClone(brief),
-                                  date: new Date().toISOString(),
-                                  reason:
-                                    "Accepted Ask Helix preference change",
-                                },
-                              ],
-                              activity: [
-                                {
-                                  id: uid(),
-                                  text: "Accepted cost preference; downstream analysis requires review",
-                                  date: new Date().toISOString(),
-                                },
-                                ...x.activity,
-                              ],
-                            };
-                          });
-                        setMessages((ms) =>
-                          ms.map((x, j) =>
-                            j === i
-                              ? {
-                                  ...x,
-                                  resolved: "Accepted · new brief revision",
-                                }
-                              : x,
-                          ),
-                        );
-                      }}
-                    >
-                      Accept
-                    </Button>
-                    <Button
-                      small
-                      onClick={() =>
-                        setMessages((ms) =>
-                          ms.map((x, j) =>
-                            j === i ? { ...x, resolved: "Dismissed" } : x,
-                          ),
-                        )
-                      }
-                    >
-                      Dismiss
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         ))}
-        {busy && (
-          <div
-            className={s.skeleton}
-            role="status"
-            aria-label="Preparing demo response"
-          />
-        )}
       </div>
       <form
         className={c.composer}
@@ -180,23 +112,12 @@ export function AskHelix({ onClose }: { onClose: () => void }) {
           ask(input);
         }}
       >
-        <input
-          aria-label="Ask about your project"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about your project…"
-        />
-        <Button
-          aria-label="Send message"
-          variant="primary"
-          disabled={busy || !input.trim()}
-        >
+        <input aria-label="Ask about this project" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about this project…" />
+        <Button aria-label="Send message" variant="primary" disabled={!input.trim()}>
           <Send size={16} />
         </Button>
       </form>
-      <div className={c.footnote}>
-        Suggestions are not scientific validation.
-      </div>
+      <div className={c.footnote}>Plans only — Helix does not test formulations.</div>
     </aside>
   );
 }

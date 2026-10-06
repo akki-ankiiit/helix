@@ -1,23 +1,40 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
-  BookOpen,
-  GitBranch,
-  FlaskConical,
-  ClipboardList,
-  ChartNoAxesCombined,
-  ShieldCheck,
-  ChevronDown,
-  ChevronRight,
-  FileText,
-  Pencil,
+  ArrowLeft,
+  ArrowRight,
   Download,
+  FileSpreadsheet,
+  Pencil,
   Send,
-  Check,
+  ChartColumn,
 } from "lucide-react";
-import { Badge, Button, Field, Modal, Notice, s } from "../../components/ui";
+import {
+  Badge,
+  Button,
+  Empty,
+  Field,
+  Modal,
+  Notice,
+  Reason,
+  Status,
+  Stepper,
+  Tabs,
+  s,
+} from "../../components/ui";
 import { useWorkspace, uid } from "../../stores/workspace";
 import { categoryFor, subcategoryFor } from "../../data/taxonomy";
+import { propertyFor, templateFor } from "../../data/property-library";
+import {
+  isStageComplete,
+  isStageKey,
+  procedure,
+  stepForStage,
+  type StageKey,
+} from "../../data/procedure";
+import { projectOutcome } from "../../domain/calculations";
+import { formatDate, formatINR, plural } from "../../lib/format";
+import type { Project } from "../../domain/models";
 import { Literature } from "../literature/Literature";
 import { Pathways } from "../pathways/Pathways";
 import { Trials } from "../trials/Trials";
@@ -25,305 +42,474 @@ import { Results } from "../results/Results";
 import { Analysis } from "../analysis/Analysis";
 import { Final } from "../approvals/Final";
 import { Constraints, UseCase, useCaseSummary } from "../intake/Intake";
-import { TargetEditor } from "../intake/TargetEditor";
+import { TargetEditor, targetErrors } from "../intake/TargetEditor";
 import { BenchmarkPicker } from "../benchmarks/BenchmarkPicker";
 import { reports } from "../../services/demo/reports";
 import c from "./Project.module.css";
-const stages = [
-  {
-    name: "Literature",
-    icon: BookOpen,
-    description: "Investigate the evidence and identify useful findings.",
-  },
-  {
-    name: "Pathways",
-    icon: GitBranch,
-    description: "Compare approaches and choose a direction to test.",
-  },
-  {
-    name: "Trials",
-    icon: FlaskConical,
-    description: "Define controlled formulations and the test plan.",
-  },
-  {
-    name: "Results",
-    icon: ClipboardList,
-    description: "Capture measured evidence, one specimen at a time.",
-  },
-  {
-    name: "Analysis",
-    icon: ChartNoAxesCombined,
-    description: "Compare against targets and decide what comes next.",
-  },
-  {
-    name: "Final",
-    icon: ShieldCheck,
-    description: "Review the complete record and approve a revision.",
-  },
-];
+
+const allStages = procedure.flatMap((step) => step.stages);
+
+export function projectCode(p: Project) {
+  return p.id.startsWith("helix")
+    ? p.id.toUpperCase()
+    : `HLX-${p.id.slice(0, 6).toUpperCase()}`;
+}
+
 export function ProjectPage() {
   const { projectId } = useParams(),
     [params, setParams] = useSearchParams();
   const state = useWorkspace();
   const p = state.projects.find((p) => p.id === projectId);
-  const [briefOpen, setBriefOpen] = useState(false),
-    [edit, setEdit] = useState(false),
-    [editTab, setEditTab] = useState("Application"),
-    [draft, setDraft] = useState(p?.brief),
-    [comment, setComment] = useState("");
-  useEffect(() => {
-    if (
-      !edit ||
-      !draft ||
-      !p ||
-      JSON.stringify(draft) === JSON.stringify(p.brief)
-    )
-      return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [edit, draft, p]);
+  const [edit, setEdit] = useState(false);
   if (!p)
     return (
-      <div className={s.empty}>
-        <h1>Project not found</h1>
-        <Link to="/projects">Return to projects</Link>
+      <div className={s.panel}>
+        <h1 className={s.srOnly}>Project not found</h1>
+        <Empty title="Project not found">
+          <p>
+            It may have been deleted, or the link is wrong. Projects are saved
+            in this browser only.
+          </p>
+          <Link className={`${s.button} ${s.primary}`} to="/projects">
+            Go to projects
+          </Link>
+        </Empty>
       </div>
     );
-  const active = params.get("stage") || p.stage;
-  function stage(name: string) {
-    setParams({ stage: name });
-  }
-  const isComplete = (name: string) =>
-    name === "Literature"
-      ? p.sources.length > 0
-      : name === "Pathways"
-        ? !!p.selectedPathway
-        : name === "Trials"
-          ? p.trials.length > 0
-          : name === "Results"
-            ? p.resultsReviewed
-            : name === "Analysis"
-              ? !p.needsReview && p.results.length > 0
-              : p.status === "Approved";
+  const requested = params.get("stage");
+  const active: StageKey = isStageKey(requested)
+    ? requested
+    : isStageKey(p.stage)
+      ? p.stage
+      : "Literature";
+  const step = stepForStage(active);
+  const index = allStages.findIndex((x) => x.key === active);
+  const prev = allStages[index - 1],
+    next = allStages[index + 1];
+  const go = (key: StageKey) => setParams({ stage: key });
+  const jobFor = (key: string) =>
+    state.jobs.find(
+      (j) =>
+        j.projectId === p.id &&
+        j.stage === key &&
+        (j.status === "Running" || j.status === "Failed"),
+    );
+  const outcome = projectOutcome(p, state.materials);
   const canEdit = ["Chemist", "Admin"].includes(state.user?.role || "");
+
   return (
     <>
       <header className={c.header}>
-        <div className={c.code}>
-          <Link to="/projects">PROJECTS</Link> /{" "}
-          {p.id.startsWith("helix")
-            ? p.id.toUpperCase()
-            : `HLX-${p.id.slice(0, 6).toUpperCase()}`}
-        </div>
         <div className={c.titleRow}>
-          <h1>{p.brief.name}</h1>
-          <div className={s.row}>
-            <Badge tone={p.status === "Approved" ? "green" : "violet"}>
-              {p.status}
-            </Badge>
-            <Button small onClick={() => reports.workbook(p)}>
+          <div>
+            <h1>{p.brief.name}</h1>
+            <p className={c.meta}>
+              {projectCode(p)} · {subcategoryFor(p.brief.subcategoryId)?.name}{" "}
+              · {p.owner} · Brief v{p.revisions.length} · Updated{" "}
+              {formatDate(p.updated)}
+            </p>
+          </div>
+          <div className={c.headerActions}>
+            <Status value={p.status} />
+            <Button small onClick={() => reports.print(p)}>
               <Download size={13} />
-              Export workbook
+              Download report (PDF)
+            </Button>
+            <Button small variant="ghost" onClick={() => reports.workbook(p)}>
+              <FileSpreadsheet size={13} />
+              Export workbook (.xlsx)
             </Button>
           </div>
         </div>
-        <div className={c.meta}>
-          <span>{categoryFor(p.brief.categoryId)?.name}</span>
-          <span>•</span>
-          <span>{subcategoryFor(p.brief.subcategoryId)?.name}</span>
-          <span>•</span>
-          <span>{p.owner}</span>
-          <span>•</span>
-          <span>Brief v{p.revisions.length}</span>
-          <Badge>Illustrative demo</Badge>
-        </div>
-      </header>
-      <div className={c.brief}>
-        <button
-          className={c.briefToggle}
-          onClick={() => setBriefOpen(!briefOpen)}
-          aria-expanded={briefOpen}
-        >
-          <div className={s.row}>
-            <FileText size={16} color="var(--accent)" />
-            <b>Formulation brief</b>
-            <span className={s.muted}>
-              {p.brief.targets.length} targets · {p.brief.benchmarkIds.length}{" "}
-              benchmarks
+        {p.trials.length > 0 && active !== "Final" && (
+          <Link
+            to={`/projects/${p.id}?stage=Final`}
+            className={`${c.outcomeStrip} ${c[`outcome_${outcome.kind}`] || ""}`}
+          >
+            <ChartColumn size={16} aria-hidden="true" />
+            <span>
+              <b>Current outcome:</b> {outcome.headline}
             </span>
-          </div>
-          <ChevronDown
-            size={15}
-            style={{ transform: briefOpen ? "rotate(180deg)" : "" }}
+            <span className={c.outcomeLink}>
+              View final report <ArrowRight size={13} />
+            </span>
+          </Link>
+        )}
+      </header>
+      <Stepper
+        label="Project procedure"
+        onSelect={(id) => {
+          const target = procedure.find((x) => x.id === id)!;
+          go(
+            (target.stages.find((st) => !isStageComplete(p, st.key)) ||
+              target.stages[0]).key,
+          );
+        }}
+        steps={procedure.map((x) => {
+          const attention = x.stages.some(
+            (st) =>
+              jobFor(st.key)?.status === "Failed" ||
+              (st.key === "Analysis" && p.needsReview && p.results.length > 0),
+          );
+          const done = x.stages.every((st) => isStageComplete(p, st.key));
+          return {
+            id: x.id,
+            number: x.number,
+            name: x.name,
+            detail:
+              x.stages.length > 1 || x.stages[0].label !== x.name
+                ? x.stages.map((st) => st.label).join(" · ")
+                : undefined,
+            current: x.id === step.id,
+            state:
+              x.id === step.id
+                ? "current"
+                : attention
+                  ? "attention"
+                  : done
+                    ? "complete"
+                    : "upcoming",
+          };
+        })}
+      />
+      <section className={c.stepBody} aria-labelledby="step-heading">
+        <div className={c.stepHeading}>
+          <p className={c.stepEyebrow}>
+            Step {step.number} of {procedure.length}
+          </p>
+          <h2 id="step-heading">{step.name}</h2>
+          <p className={s.lead}>{step.purpose}</p>
+        </div>
+        {step.stages.length > 1 && (
+          <Tabs
+            label={`${step.name} views`}
+            active={active}
+            onSelect={(key) => go(key as StageKey)}
+            items={step.stages.map((st) => ({
+              id: st.key,
+              label: st.label,
+              done: isStageComplete(p, st.key),
+            }))}
           />
-        </button>
-        {briefOpen && (
-          <div className={c.briefContent}>
-            <p>{useCaseSummary(p.brief)}</p>
-            <p>
-              Cost ceiling:{" "}
-              {p.brief.constraints.cost
-                ? `${p.brief.constraints.currency} ${p.brief.constraints.cost}/kg`
-                : "Not defined"}{" "}
-              · Standards: R&D confirmation required.
+        )}
+        <p className={c.stageDescription}>
+          {step.stages.find((st) => st.key === active)?.description}
+        </p>
+        <div className={c.stageContent}>
+          {active === "Brief" ? (
+            <BriefView project={p} canEdit={canEdit} onEdit={() => setEdit(true)} />
+          ) : active === "Literature" ? (
+            <Literature project={p} />
+          ) : active === "Pathways" ? (
+            <Pathways project={p} />
+          ) : active === "Trials" ? (
+            <Trials project={p} />
+          ) : active === "Results" ? (
+            <Results project={p} />
+          ) : active === "Analysis" ? (
+            <Analysis project={p} onTrials={() => go("Trials")} />
+          ) : (
+            <Final project={p} onGo={go} />
+          )}
+        </div>
+        <nav className={s.stepFooter} aria-label="Step navigation">
+          {prev ? (
+            <Button variant="ghost" onClick={() => go(prev.key)}>
+              <ArrowLeft size={14} />
+              Back to {prev.label}
+            </Button>
+          ) : (
+            <span />
+          )}
+          {next && (
+            <Button
+              variant={isStageComplete(p, active) ? "primary" : "default"}
+              onClick={() => go(next.key)}
+            >
+              Next: {next.label}
+              <ArrowRight size={14} />
+            </Button>
+          )}
+        </nav>
+      </section>
+      <ProjectActivity project={p} />
+      {edit && <ReviseBrief project={p} onClose={() => setEdit(false)} />}
+    </>
+  );
+}
+
+function BriefView({
+  project: p,
+  canEdit,
+  onEdit,
+}: {
+  project: Project;
+  canEdit: boolean;
+  onEdit: () => void;
+}) {
+  const state = useWorkspace();
+  const k = p.brief.constraints;
+  const standard = templateFor(p.brief.subcategoryId).standard;
+  return (
+    <div className={s.stack}>
+      <div className={c.briefGrid}>
+        <div>
+          <h3>Product</h3>
+          <p>
+            {categoryFor(p.brief.categoryId)?.name} ›{" "}
+            {subcategoryFor(p.brief.subcategoryId)?.name}
+          </p>
+        </div>
+        <div>
+          <h3>Application</h3>
+          <p>{useCaseSummary(p.brief)}</p>
+          {p.brief.description && <p className={s.muted}>{p.brief.description}</p>}
+        </div>
+        <div>
+          <h3>Benchmarks</h3>
+          <p>
+            {p.brief.benchmarkIds
+              .map((id) => state.benchmarks.find((b) => b.id === id)?.name)
+              .filter(Boolean)
+              .join(", ") || "None selected"}
+          </p>
+        </div>
+        <div>
+          <h3>Cost limit</h3>
+          <p>
+            {k.cost
+              ? k.currency && k.currency !== "INR"
+                ? `${k.currency} ${k.cost}/kg — re-enter in ₹`
+                : `${formatINR(Number(k.cost))} per kg of dry blend (excl. GST and delivery)`
+              : "No limit set"}
+          </p>
+        </div>
+      </div>
+      <div className={s.tableWrap}>
+        <table className={s.table}>
+          <caption className={s.srOnly}>Targets in brief v{p.revisions.length}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Test</th>
+              <th scope="col">Target</th>
+              <th scope="col">Priority</th>
+              <th scope="col">Method and conditions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {p.brief.targets.map((t) => (
+              <tr key={t.propertyId}>
+                <td>
+                  <b>{propertyFor(t.propertyId).name}</b>
+                  <small>{propertyFor(t.propertyId).plain}</small>
+                </td>
+                <td>
+                  {t.operator} {t.value}
+                  {t.operator === "Between" ? `–${t.max}` : ""} {t.unit}
+                </td>
+                <td>{t.priority}</td>
+                <td style={{ whiteSpace: "normal" }}>
+                  {t.method}
+                  <small>{t.condition}</small>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {standard && (
+        <Notice warning>
+          {standard.identifier} is listed for reference only. It has not been
+          verified, and the targets above are project targets, not official
+          limits.
+        </Notice>
+      )}
+      <div className={s.row}>
+        <Button disabled={!canEdit} onClick={onEdit}>
+          <Pencil size={13} />
+          Revise brief
+        </Button>
+        {!canEdit && (
+          <Reason>
+            Only a Chemist or Admin can revise the brief. Change your demo role
+            in Settings.
+          </Reason>
+        )}
+      </div>
+      <details className={s.details}>
+        <summary>Brief version history ({p.revisions.length})</summary>
+        {p.revisions
+          .slice()
+          .reverse()
+          .map((r) => (
+            <p key={r.version}>
+              v{r.version} · {formatDate(r.date)} · {r.reason}
             </p>
-            <div className={s.between} style={{ marginTop: 16 }}>
-              <Badge tone="amber">Unverified standards / draft methods</Badge>
-              <Button
-                small
-                disabled={!canEdit}
-                onClick={() => {
-                  setDraft(structuredClone(p.brief));
-                  setEdit(true);
-                }}
-              >
-                <Pencil size={12} />
-                Revise brief
-              </Button>
-            </div>
-            <details style={{ fontSize: 11, marginTop: 15 }}>
-              <summary>Brief version history</summary>
-              {p.revisions.map((r) => (
-                <p key={r.version}>
-                  v{r.version} · {new Date(r.date).toLocaleDateString()} ·{" "}
-                  {r.reason}
-                </p>
-              ))}
-            </details>
+          ))}
+      </details>
+    </div>
+  );
+}
+
+function ReviseBrief({
+  project: p,
+  onClose,
+}: {
+  project: Project;
+  onClose: () => void;
+}) {
+  const state = useWorkspace();
+  const [draft, setDraft] = useState(() => structuredClone(p.brief)),
+    [tab, setTab] = useState("Application"),
+    [tried, setTried] = useState(false);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(p.brief);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+  const errors = [
+    ...(draft.name.trim().length < 3
+      ? ["Enter a project name of at least 3 characters (Application tab)."]
+      : []),
+    ...targetErrors(draft).map((e) => `${e} (Targets tab)`),
+  ];
+  const close = () => {
+    if (!dirty || window.confirm("Discard your unsaved changes to the brief?"))
+      onClose();
+  };
+  const plain = state.user?.mode === "Non-scientist";
+  return (
+    <Modal title={`Revise brief · creates v${p.revisions.length + 1}`} onClose={close}>
+      <div className={s.stack}>
+        <p className={s.muted} style={{ fontSize: 13 }}>
+          Saving creates a new version. Earlier versions and lab results are
+          kept, and results will need to be reviewed again.
+        </p>
+        <Tabs
+          label="Brief sections"
+          active={tab}
+          onSelect={setTab}
+          items={["Application", "Benchmarks", "Targets", "Constraints"].map(
+            (t) => ({ id: t, label: t }),
+          )}
+        />
+        {tab === "Application" ? (
+          <UseCase
+            brief={draft}
+            plain={plain}
+            showErrors={tried}
+            onChange={(patch) => setDraft({ ...draft, ...patch })}
+          />
+        ) : tab === "Benchmarks" ? (
+          <BenchmarkPicker
+            selected={draft.benchmarkIds}
+            onChange={(benchmarkIds) => setDraft({ ...draft, benchmarkIds })}
+          />
+        ) : tab === "Targets" ? (
+          <TargetEditor
+            brief={draft}
+            showErrors={tried}
+            onChange={(patch) => setDraft({ ...draft, ...patch })}
+          />
+        ) : (
+          <Constraints
+            brief={draft}
+            plain={plain}
+            onChange={(patch) => setDraft({ ...draft, ...patch })}
+          />
+        )}
+        {tried && errors.length > 0 && (
+          <div role="alert" className={s.error}>
+            {errors.map((e) => (
+              <p key={e}>{e}</p>
+            ))}
           </div>
         )}
       </div>
-      <nav className={c.pipeline} aria-label="Formulation stages">
-        {stages.map(({ name, icon: Icon }) => (
-          <button
-            key={name}
-            className={
-              active === name ? c.current : isComplete(name) ? c.completed : ""
+      <div className={s.modalActions}>
+        <Button onClick={close}>Cancel</Button>
+        <Button
+          variant="primary"
+          disabled={!dirty}
+          onClick={() => {
+            if (errors.length) {
+              setTried(true);
+              return;
             }
-            onClick={() => stage(name)}
-          >
-            {isComplete(name) ? <Check size={13} /> : <Icon size={14} />} {name}
-          </button>
-        ))}
-      </nav>
-      {stages.map(({ name, icon: Icon, description }, i) => {
-        const job = state.jobs.find(
-          (j) => j.projectId === p.id && j.stage === name,
-        );
-        const status =
-          job?.status === "Running"
-            ? "Running simulation"
-            : job?.status === "Failed"
-              ? "Failed"
-              : isComplete(name)
-                ? "Complete"
-                : name === "Final" && p.status === "In review"
-                  ? "Review needed"
-                  : name === "Results" && p.trials.length
-                    ? p.brief.targets.every((t) =>
-                        p.results.some(
-                          (r) =>
-                            r.trialId === p.trials.at(-1)?.id &&
-                            r.propertyId === t.propertyId &&
-                            r.readings.every((v) => v !== null),
-                        ),
-                      )
-                      ? "Review needed"
-                      : "Pending results"
-                    : name === "Analysis" && p.needsReview
-                      ? "Review needed"
-                      : i > 0 && !isComplete(stages[i - 1].name)
-                        ? "Waiting"
-                        : "Ready";
-        return (
-          <section
-            key={name}
-            className={`${c.stage} ${active === name ? c.stageOpen : ""}`}
-          >
-            <button
-              className={c.stageHead}
-              onClick={() => stage(active === name ? "collapsed" : name)}
-              aria-expanded={active === name}
-            >
-              <div className={s.row}>
-                <span className={c.stageIcon}>
-                  <Icon size={17} />
-                </span>
-                <div>
-                  <h2>
-                    <span
-                      style={{
-                        color: "var(--muted)",
-                        fontWeight: 400,
-                        marginRight: 8,
-                      }}
-                    >
-                      0{i + 1}
-                    </span>
-                    {name}
-                  </h2>
-                  <small>{description}</small>
-                </div>
-              </div>
-              <div className={s.row}>
-                <Badge
-                  tone={
-                    status === "Complete"
-                      ? "green"
-                      : /review|Pending|Waiting/.test(status)
-                        ? "amber"
-                        : status === "Failed"
-                          ? "red"
-                          : "violet"
-                  }
-                >
-                  {status}
-                </Badge>
-                {active === name ? (
-                  <ChevronDown size={15} />
-                ) : (
-                  <ChevronRight size={15} />
-                )}
-              </div>
-            </button>
-            {active === name && (
-              <div className={c.stageBody}>
-                {name === "Literature" ? (
-                  <Literature project={p} />
-                ) : name === "Pathways" ? (
-                  <Pathways project={p} onNext={() => stage("Trials")} />
-                ) : name === "Trials" ? (
-                  <Trials project={p} />
-                ) : name === "Results" ? (
-                  <Results project={p} />
-                ) : name === "Analysis" ? (
-                  <Analysis project={p} onTrials={() => stage("Trials")} />
-                ) : (
-                  <Final project={p} />
-                )}
-              </div>
-            )}
-          </section>
-        );
-      })}
-      <div className={s.grid2} style={{ marginTop: 24 }}>
-        <section className={s.panel}>
-          <div className={s.panelHeader}>
-            <h2>Project conversation</h2>
-            <Badge>Local demo</Badge>
-          </div>
-          {p.comments.map((comment) => (
-            <div className={c.comment} key={comment.id}>
+            state.updateProject(p.id, (x) => ({
+              ...x,
+              brief: draft,
+              revisions: [
+                ...x.revisions,
+                {
+                  version: x.revisions.length + 1,
+                  brief: structuredClone(draft),
+                  date: new Date().toISOString(),
+                  reason: "User revised brief",
+                },
+              ],
+              testPlan: draft.targets.map(
+                (t) =>
+                  x.testPlan.find((plan) => plan.propertyId === t.propertyId) || {
+                    propertyId: t.propertyId,
+                    required: t.priority === "Must",
+                    specimens: 3,
+                    ageDays: 28,
+                    condition: t.condition,
+                  },
+              ),
+              needsReview: true,
+              resultsReviewed: false,
+              status: "In progress",
+              activity: [
+                {
+                  id: uid(),
+                  text: `Brief v${x.revisions.length + 1} saved; results need review again`,
+                  date: new Date().toISOString(),
+                },
+                ...x.activity,
+              ],
+            }));
+            onClose();
+            state.notify(
+              `Brief v${p.revisions.length + 1} saved. Earlier versions are kept.`,
+            );
+          }}
+        >
+          Save as v{p.revisions.length + 1}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+function ProjectActivity({ project: p }: { project: Project }) {
+  const state = useWorkspace();
+  const [comment, setComment] = useState("");
+  return (
+    <details className={c.activity}>
+      <summary>
+        Comments and decision trail
+        <Badge>
+          {plural(p.comments.length, "comment")} ·{" "}
+          {plural(p.activity.length, "event")}
+        </Badge>
+      </summary>
+      <div className={s.grid2}>
+        <section>
+          <h3>Comments</h3>
+          {p.comments.map((x) => (
+            <div className={c.comment} key={x.id}>
               <div className={s.between}>
-                <h3 style={{ fontSize: 12 }}>{comment.author}</h3>
-                <small>{new Date(comment.date).toLocaleDateString()}</small>
+                <b>{x.author}</b>
+                <small>{formatDate(x.date)}</small>
               </div>
-              <p>{comment.text}</p>
+              <p>{x.text}</p>
             </div>
           ))}
+          {!p.comments.length && <p className={s.muted}>No comments yet.</p>}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -334,7 +520,7 @@ export function ProjectPage() {
                   ...x.comments,
                   {
                     id: uid(),
-                    text: comment,
+                    text: comment.trim(),
                     author: state.user?.name || "Demo user",
                     date: new Date().toISOString(),
                   },
@@ -342,155 +528,40 @@ export function ProjectPage() {
               }));
               setComment("");
             }}
-            style={{ marginTop: 18 }}
+            style={{ marginTop: 16 }}
           >
             <Field label="Add a comment">
               <textarea
                 value={comment}
+                rows={2}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Share context for the next decision…"
+                placeholder="Share context for the next decision"
               />
             </Field>
-            <Button small disabled={!comment.trim()} style={{ marginTop: 12 }}>
+            <Button small disabled={!comment.trim()} style={{ marginTop: 10 }}>
               <Send size={12} />
-              Add comment
+              Post comment
             </Button>
           </form>
         </section>
-        <section className={s.panel}>
-          <div className={s.panelHeader}>
-            <h2>Decision trail</h2>
-            <Badge>{p.activity.length} events</Badge>
-          </div>
+        <section>
+          <h3>Decision trail</h3>
           <div className={c.timeline}>
-            {p.activity.slice(0, 6).map((a) => (
+            {p.activity.slice(0, 8).map((a) => (
               <div className={c.event} key={a.id}>
                 <span className={c.eventDot} />
                 <div>
                   {a.text}
-                  <small>{new Date(a.date).toLocaleDateString()}</small>
+                  <small>{formatDate(a.date)}</small>
                 </div>
               </div>
             ))}
           </div>
-          <p className={s.muted} style={{ fontSize: 10 }}>
-            Comments and activity are stored locally. No multi-user
-            synchronization is connected.
+          <p className={s.muted} style={{ fontSize: 12 }}>
+            Saved in this browser only. Not shared with other users.
           </p>
         </section>
       </div>
-      {edit && draft && (
-        <Modal
-          title={`Revise brief · v${p.revisions.length + 1}`}
-          onClose={() => {
-            if (
-              JSON.stringify(draft) === JSON.stringify(p.brief) ||
-              window.confirm("Discard unsaved brief edits?")
-            )
-              setEdit(false);
-          }}
-        >
-          <div className={s.stack}>
-            <Notice warning>
-              A revision preserves earlier briefs and marks downstream analysis
-              for review. Existing trial evidence is retained.
-            </Notice>
-            <div className={s.tabs}>
-              {["Application", "Benchmarks", "Targets", "Constraints"].map(
-                (t) => (
-                  <button
-                    key={t}
-                    className={editTab === t ? s.active : ""}
-                    onClick={() => setEditTab(t)}
-                  >
-                    {t}
-                  </button>
-                ),
-              )}
-            </div>
-            {editTab === "Application" ? (
-              <UseCase
-                brief={draft}
-                plain={state.user?.mode === "Non-scientist"}
-                onChange={(patch) => setDraft({ ...draft, ...patch })}
-              />
-            ) : editTab === "Benchmarks" ? (
-              <BenchmarkPicker
-                selected={draft.benchmarkIds}
-                onChange={(benchmarkIds) =>
-                  setDraft({ ...draft, benchmarkIds })
-                }
-              />
-            ) : editTab === "Targets" ? (
-              <TargetEditor
-                brief={draft}
-                onChange={(patch) => setDraft({ ...draft, ...patch })}
-              />
-            ) : (
-              <Constraints
-                brief={draft}
-                onChange={(patch) => setDraft({ ...draft, ...patch })}
-                plain={state.user?.mode === "Non-scientist"}
-              />
-            )}
-          </div>
-          <div className={s.modalActions}>
-            <Button onClick={() => setEdit(false)}>
-              Discard unsaved edits
-            </Button>
-            <Button
-              variant="primary"
-              disabled={
-                !draft.name.trim() ||
-                !draft.targets.length ||
-                draft.targets.some((t) => !t.value.trim())
-              }
-              onClick={() => {
-                state.updateProject(p.id, (x) => ({
-                  ...x,
-                  brief: draft,
-                  revisions: [
-                    ...x.revisions,
-                    {
-                      version: x.revisions.length + 1,
-                      brief: structuredClone(draft),
-                      date: new Date().toISOString(),
-                      reason: "User revised brief",
-                    },
-                  ],
-                  testPlan: draft.targets.map(
-                    (t) =>
-                      x.testPlan.find(
-                        (plan) => plan.propertyId === t.propertyId,
-                      ) || {
-                        propertyId: t.propertyId,
-                        required: t.priority === "Must",
-                        specimens: 3,
-                        ageDays: 28,
-                        condition: t.condition,
-                      },
-                  ),
-                  needsReview: true,
-                  resultsReviewed: false,
-                  status: "In progress",
-                  activity: [
-                    {
-                      id: uid(),
-                      text: "Brief revision created; downstream analysis marked for review",
-                      date: new Date().toISOString(),
-                    },
-                    ...x.activity,
-                  ],
-                }));
-                setEdit(false);
-                state.notify("Brief revision saved. Prior versions retained.");
-              }}
-            >
-              Save new revision
-            </Button>
-          </div>
-        </Modal>
-      )}
-    </>
+    </details>
   );
 }

@@ -33,28 +33,23 @@ export function Templates() {
     <>
       <div className={s.pageHeader}>
         <div>
-          <div className={s.eyebrow} style={{ marginBottom: 10 }}>
-            A CONSIDERED STARTING POINT
-          </div>
-          <h1>Formulation templates</h1>
+          <h1>Templates</h1>
           <p>
-            Category-specific property sets, application forms, and draft test
-            plans.
+            Starting sets of targets for each product family. Use one to start
+            a new project with its targets already filled in.
           </p>
         </div>
-        <Badge tone="amber">33 draft templates · R&D review required</Badge>
       </div>
       <div className={s.stack}>
         <Notice warning>
-          No template is scientifically validated. Standard metadata is stored
-          separately from project targets. Missing official limits are never
-          inferred.
+          All 33 templates are drafts and need R&amp;D review. They suggest
+          which tests to run; they do not contain official limits.
         </Notice>
         <div className={s.between}>
           <SearchBox
             value={query}
             onChange={setQuery}
-            placeholder="Search templates…"
+            placeholder="Search product families"
           />
           <select
             aria-label="Template category"
@@ -83,18 +78,24 @@ export function Templates() {
                   {sub.category.name}
                 </p>
                 <p className={s.muted} style={{ fontSize: 12, marginTop: 18 }}>
-                  {template.propertyIds.length} editable property targets
-                  <br />
-                  {template.standard?.identifier || "Standard not configured"} ·
-                  unverified
+                  {template.propertyIds.length
+                    ? `${template.propertyIds.length} suggested tests`
+                    : "No suggested tests yet — add your own"}
+                  {template.standard && (
+                    <>
+                      <br />
+                      {template.standard.identifier} (reference only, not verified)
+                    </>
+                  )}
                 </p>
                 <div className={s.row} style={{ marginTop: 22 }}>
                   <Button small onClick={() => setOpen(sub.id)}>
-                    View template
+                    View tests
                   </Button>
                   <Button
                     small
                     variant="ghost"
+                    aria-label={`Start a project from the ${sub.name} template`}
                     onClick={() => {
                       state.newDraft();
                       state.setDraft({
@@ -102,10 +103,10 @@ export function Templates() {
                         subcategoryId: sub.id,
                         targets: defaultTargets(sub.id),
                       });
-                      navigate("/projects/new/use-case");
+                      navigate("/projects/new/application");
                     }}
                   >
-                    Use template
+                    Start project
                     <ArrowUpRight size={13} />
                   </Button>
                 </div>
@@ -114,7 +115,7 @@ export function Templates() {
           })}
         </div>
         {!families.length && (
-          <div className={s.empty}>No templates match your search.</div>
+          <div className={s.empty}>No templates match. Try another word or category.</div>
         )}
       </div>
       {open && (

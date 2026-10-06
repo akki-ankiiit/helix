@@ -11,6 +11,18 @@ import {
   seedProjects,
 } from "../../src/data/fixtures/workspace";
 import { taxonomy } from "../../src/data/taxonomy";
+import {
+  costBreakdown,
+  projectOutcome,
+} from "../../src/domain/calculations";
+import {
+  formatINR,
+  formatMeasured,
+  usdToInr,
+  USD_TO_INR,
+} from "../../src/lib/format";
+import { migrateToInr } from "../../src/stores/migrations";
+import { normaliseIntakeStep } from "../../src/data/intake-steps";
 import { properties, defaultTargets } from "../../src/data/property-library";
 describe("configurable taxonomy", () => {
   it("contains exactly six categories and 33 unique families", () => {
@@ -33,15 +45,16 @@ describe("dry blend calculations", () => {
     expect(r.total).toBeCloseTo(100, 8);
     expect(r.errors).toEqual([]);
     expect(r.masses.cement).toBeCloseTo(1.75);
-    expect(r.cost).toBeCloseTo(0.22405, 5);
+    // ₹ per kg of dry blend, from the INR-converted fixture prices.
+    expect(r.cost).toBeCloseTo(21.4999, 4);
   });
   it("rejects invalid totals, negatives, material limits, and ceiling breaches", () => {
     const t = seedProjects()[0].trials[0];
     t.percentages.cement = -2;
     t.percentages.polymer = 10;
     const r = recipeMetrics(t, initialMaterials, 0.01);
-    expect(r.errors.some((e) => e.includes("invalid quantity"))).toBe(true);
-    expect(r.errors.some((e) => e.includes("outside"))).toBe(true);
+    expect(r.errors.some((e) => e.includes("0% or more"))).toBe(true);
+    expect(r.errors.some((e) => e.includes("must be between"))).toBe(true);
     expect(r.errors.some((e) => e.includes("100%"))).toBe(true);
     expect(r.errors.some((e) => e.includes("ceiling"))).toBe(true);
   });
@@ -135,7 +148,7 @@ describe("approval gate", () => {
   it("requires results review even with passing numbers", () => {
     const p = seedProjects()[0];
     expect(approvalIssues(p, p.trials[1], initialMaterials)).toContain(
-      "Measured results require reviewer sign-off",
+      "Results have not been reviewed",
     );
     p.resultsReviewed = true;
     p.results = p.results.map((r) => ({ ...r, reviewed: true }));
@@ -147,8 +160,8 @@ describe("approval gate", () => {
     p.results = p.results.filter((r) => r.propertyId !== "slip");
     p.needsReview = true;
     const issues = approvalIssues(p, p.trials[1], initialMaterials);
-    expect(issues.some((x) => x.includes("mandatory"))).toBe(true);
-    expect(issues.some((x) => x.includes("Downstream"))).toBe(true);
+    expect(issues.some((x) => x.includes("Slip: 3 specimen readings are needed"))).toBe(true);
+    expect(issues.some((x) => x.includes("Something changed"))).toBe(true);
   });
 });
 describe("locked cost context", () => {
@@ -170,8 +183,95 @@ describe("locked cost context", () => {
       initialMaterials.map((m) => ({ ...m, price: null })),
     );
     expect(issues.some((issue) => issue.includes("incomplete"))).toBe(true);
-    expect(issues.some((issue) => issue.includes("specimen evidence"))).toBe(
+    expect(issues.some((issue) => issue.includes("has not been reviewed"))).toBe(
       true,
     );
+  });
+});
+
+describe("Indian rupee formatting", () => {
+  it("uses Indian digit grouping and two decimals", () => {
+    expect(formatINR(125000)).toBe("₹1,25,000.00");
+    expect(formatINR(12345678.9)).toBe("₹1,23,45,678.90");
+    expect(formatINR(125000, 0)).toBe("₹1,25,000");
+  });
+  it("shows missing values as a dash, never ₹0", () => {
+    expect(formatINR(null)).toBe("—");
+    expect(formatINR(Number.NaN)).toBe("—");
+  });
+  it("converts at the documented reference rate", () => {
+    expect(USD_TO_INR.rate).toBe(95.96);
+    expect(usdToInr(0.16)).toBe(15.35);
+    expect(usdToInr(5.2)).toBe(498.99);
+  });
+});
+describe("measured-value precision", () => {
+  it("matches the precision of the readings", () => {
+    expect(formatMeasured(32, [31, 32, 33])).toBe("32");
+    expect(formatMeasured(0.38, [0.36, 0.4, 0.38])).toBe("0.38");
+    expect(formatMeasured(null, [])).toBe("—");
+  });
+});
+describe("saved-data migration", () => {
+  it("converts saved USD prices, ceilings and pathway estimates to INR once", () => {
+    const project = seedProjects()[0];
+    const legacy = {
+      draftStep: "use-case",
+      draft: { ...project.brief, constraints: { ...project.brief.constraints, currency: "USD", cost: "0.30" } },
+      materials: initialMaterials.map((m) => ({ ...m, currency: "USD", price: m.id === "cement" ? 0.16 : null })),
+      projects: [
+        {
+          ...project,
+          brief: { ...project.brief, constraints: { ...project.brief.constraints, currency: "USD", cost: "0.30" } },
+          pathways: project.pathways.map((p) => ({ ...p, cost: 0.21 })),
+        },
+      ],
+    };
+    const next = migrateToInr(legacy);
+    expect(next.draftStep).toBe("application");
+    expect(next.materials![0]).toMatchObject({ currency: "INR", price: 15.35 });
+    expect(next.materials![1].price).toBeNull();
+    expect(next.projects![0].brief.constraints).toMatchObject({ currency: "INR", cost: "28.79" });
+    expect(next.projects![0].pathways[0].cost).toBe(20.15);
+    expect(next.projects![0].activity[0].text).toContain("95.96");
+  });
+  it("leaves non-USD currencies for the user to reconcile", () => {
+    const project = seedProjects()[0];
+    const next = migrateToInr({
+      projects: [{ ...project, brief: { ...project.brief, constraints: { ...project.brief.constraints, currency: "EUR", cost: "1" } } }],
+    });
+    expect(next.projects![0].brief.constraints.currency).toBe("EUR");
+  });
+  it("maps old intake step names", () => {
+    expect(normaliseIntakeStep("category")).toBe("product");
+    expect(normaliseIntakeStep("brief")).toBe("benchmarks");
+    expect(normaliseIntakeStep("targets")).toBe("targets");
+    expect(normaliseIntakeStep("nonsense")).toBe("product");
+  });
+});
+describe("final report figures", () => {
+  it("cost breakdown lines add up to the recipe cost", () => {
+    const t = seedProjects()[0].trials[1];
+    const total = costBreakdown(t, initialMaterials).reduce((a, l) => a + (l.perKg ?? 0), 0);
+    expect(total).toBeCloseTo(recipeMetrics(t, initialMaterials).cost!, 9);
+  });
+  it("recommends the passing trial but lists remaining checks", () => {
+    const p = seedProjects()[0];
+    const o = projectOutcome(p, initialMaterials);
+    expect(o.kind).toBe("review");
+    expect(o.passCount).toBe(4);
+    expect(o.headline).toBe("T02 meets all 4 targets");
+  });
+  it("reports a failing latest trial", () => {
+    const p = seedProjects()[0];
+    p.trials = [p.trials[0]];
+    const o = projectOutcome(p, initialMaterials);
+    expect(o.kind).toBe("failing");
+    expect(o.failCount).toBe(1);
+  });
+  it("reports missing readings as incomplete, not as a failure", () => {
+    const p = seedProjects()[0];
+    p.results = p.results.filter((r) => !(r.trialId === "trial-2" && r.propertyId === "slip"));
+    expect(projectOutcome(p, initialMaterials).kind).toBe("incomplete");
   });
 });

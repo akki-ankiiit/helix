@@ -1,80 +1,83 @@
 import { useState } from "react";
-import {
-  FileSpreadsheet,
-  FileText,
-  Download,
-  ArrowUpRight,
-} from "lucide-react";
 import { Link } from "react-router-dom";
-import { Badge, Button, Notice, SearchBox, s } from "../../components/ui";
+import { Download, FileSpreadsheet, Printer } from "lucide-react";
+import { Badge, Button, Empty, SearchBox, Status, s } from "../../components/ui";
+import { useAllProjects } from "../../planner/store";
+import { planStatus, planSummary } from "../../planner/calc";
+import { downloadReport, downloadWorkbook, printReport } from "../../planner/report";
+import { formatDate } from "../../lib/format";
 import { useWorkspace } from "../../stores/workspace";
-import { reports } from "../../services/demo/reports";
+
 export function Reports() {
-  const state = useWorkspace(),
-    [query, setQuery] = useState("");
+  const all = useAllProjects();
+  const notify = useWorkspace((x) => x.notify);
+  const [query, setQuery] = useState("");
+  const list = all.filter((p) =>
+    `${p.id} ${p.title} ${p.category}`.toLowerCase().includes(query.toLowerCase()),
+  );
   return (
     <>
       <div className={s.pageHeader}>
         <div>
-          <div className={s.eyebrow} style={{ marginBottom: 10 }}>
-            RESEARCH, READY TO SHARE
-          </div>
-          <h1>Reports & dossiers</h1>
+          <h1>Reports</h1>
           <p>
-            Carry the context with the numbers. Every export includes project
-            and revision information.
+            Download the final plan for any project with a generated plan. Reports match the project's Create screen.
           </p>
         </div>
-        <Badge>Generated from current local records</Badge>
       </div>
       <div className={s.stack}>
-        <Notice>
-          Excel exports are genuine .xlsx workbooks with separate brief, recipe,
-          and results sheets. Dossiers use your browser’s Print / Save as PDF
-          flow. All output is labeled as illustrative demo data.
-        </Notice>
-        <SearchBox
-          value={query}
-          onChange={setQuery}
-          placeholder="Search project reports…"
-        />
-        {state.projects
-          .filter((p) =>
-            p.brief.name.toLowerCase().includes(query.toLowerCase()),
-          )
-          .map((p) => (
-            <div className={s.panel} key={p.id}>
+        <p className={s.muted} style={{ fontSize: 13 }}>
+          <b>Report (.html):</b> statuses, formulation and batch tables, mixing and processing plan, test matrix, cost, recommendations, assumptions, gaps and sources; it opens in any browser and can be printed to PDF.{" "}
+          <b>Workbook (.xlsx):</b> the same figures on separate sheets.
+        </p>
+        <SearchBox value={query} onChange={setQuery} placeholder="Search by project or category" />
+        {list.map((p) => {
+          const st = planStatus(p);
+          return (
+            <article className={s.panel} key={p.id}>
               <div className={s.between}>
                 <div>
-                  <h2>{p.brief.name}</h2>
-                  <p className={s.muted} style={{ fontSize: 12, marginTop: 8 }}>
-                    Brief v{p.revisions.length} · {p.trials.length} recipe
-                    revisions · {p.results.length} test records
+                  <h2 style={{ fontSize: 17 }}>
+                    <Link to={`/projects/${p.id}/create`}>
+                      {p.id} · {p.title || "Untitled project"}
+                    </Link>
+                  </h2>
+                  <p className={s.muted} style={{ fontSize: 13, marginTop: 4 }}>
+                    {p.plan ? `${planSummary(p).headline} · plan v${p.plan.version}, ${formatDate(p.plan.generatedAt)}` : "No plan generated yet — finish Review, then generate it in Create."}
                   </p>
                 </div>
-                <Link
-                  to={`/projects/${p.id}`}
-                  aria-label={`Open ${p.brief.name}`}
-                >
-                  <ArrowUpRight size={18} />
-                </Link>
+                <div className={s.row}>
+                  <Status value={st} />
+                  {p.reference && <Badge tone="violet">Reference sample</Badge>}
+                </div>
               </div>
-              <div className={`${s.row} ${s.wrap}`} style={{ marginTop: 22 }}>
-                <Button onClick={() => reports.workbook(p)}>
-                  <FileSpreadsheet size={15} />
-                  Trial sheets & results (.xlsx)
-                  <Download size={13} />
-                </Button>
-                <Button onClick={() => reports.print(p)}>
-                  <FileText size={15} />
-                  Product specification / dossier (PDF)
-                </Button>
+              <div className={`${s.row} ${s.wrap}`} style={{ marginTop: 16 }}>
+                {p.plan ? (
+                  <>
+                    <Button onClick={() => downloadReport(p)}>
+                      <Download size={14} /> Download report
+                    </Button>
+                    <Button variant="ghost" onClick={() => { if (!printReport(p)) notify("Your browser blocked the report window. Allow pop-ups, or use “Download report”."); }}>
+                      <Printer size={14} /> Print or save as PDF
+                    </Button>
+                    <Button variant="ghost" onClick={() => downloadWorkbook(p)}>
+                      <FileSpreadsheet size={14} /> Workbook (.xlsx)
+                    </Button>
+                  </>
+                ) : (
+                  <Link className={s.button} to={`/projects/${p.id}`}>
+                    Continue project
+                  </Link>
+                )}
               </div>
-            </div>
-          ))}
-        {!state.projects.some((p) =>
-          p.brief.name.toLowerCase().includes(query.toLowerCase()),
-        ) && <div className={s.empty}>No project reports match.</div>}
+            </article>
+          );
+        })}
+        {!list.length && (
+          <Empty title="No reports match your search">
+            <p>Try a different word.</p>
+          </Empty>
+        )}
       </div>
     </>
   );

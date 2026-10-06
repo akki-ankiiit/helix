@@ -22,6 +22,11 @@ import {
 import { useWorkspace } from "../../stores/workspace";
 import { categoryFor, subcategoryFor } from "../../data/taxonomy";
 import c from "./Projects.module.css";
+import { currentStep, procedure } from "../../data/procedure";
+import { intakePath } from "../../data/intake-steps";
+import { projectOutcome } from "../../domain/calculations";
+import { formatDate } from "../../lib/format";
+import { projectCode } from "./ProjectPage";
 export function Projects() {
   const state = useWorkspace(),
     navigate = useNavigate();
@@ -38,7 +43,7 @@ export function Projects() {
   const due = state.projects.reduce(
     (n, p) =>
       n +
-      p.testPlan.filter(
+      (p.trials.length ? p.testPlan : []).filter(
         (t) =>
           !p.results.some(
             (r) =>
@@ -49,30 +54,34 @@ export function Projects() {
       ).length,
     0,
   );
+  const readyForReview = state.projects.filter((p) => {
+    const k = projectOutcome(p, state.materials).kind;
+    return k === "review" || k === "ready";
+  }).length;
   function newProject() {
     if (
       state.draft.categoryId &&
       !window.confirm(
-        "Start a new formulation and replace the unfinished intake? Choose Cancel to continue the saved brief instead.",
+        "You have an unfinished brief. Start a new one and discard it? Choose Cancel to keep it.",
       )
     )
       return;
     state.newDraft();
-    navigate(state.user?.mode ? "/projects/new/category" : "/onboarding/mode");
+    navigate(state.user?.mode ? "/projects/new/product" : "/onboarding/mode");
   }
   return (
     <>
       <div className={s.pageHeader}>
         <div>
-          <div className={s.eyebrow} style={{ marginBottom: 10 }}>
-            YOUR MATERIALS WORKSPACE
-          </div>
-          <h1>Good things start with a question.</h1>
-          <p>Turn your next material requirement into a measured result.</p>
+          <h1>Projects</h1>
+          <p>
+            Each project goes from a brief to a tested, approved recipe in five
+            steps: {procedure.map((x) => x.name).join(" → ")}.
+          </p>
         </div>
         <Button variant="primary" onClick={newProject}>
           <Plus size={16} />
-          New formulation
+          New project
         </Button>
       </div>
       <div className={s.grid3} style={{ marginBottom: 32 }}>
@@ -81,19 +90,19 @@ export function Projects() {
             label: "Active projects",
             value: state.projects.filter((p) => p.status !== "Approved").length,
             icon: FlaskConical,
-            note: "Ideas moving toward validation",
-          },
-          {
-            label: "Running simulations",
-            value: state.jobs.filter((j) => j.status === "Running").length,
-            icon: Activity,
-            note: "Continue working while jobs run",
+            note: "Not yet approved",
           },
           {
             label: "Tests awaiting results",
             value: due,
             icon: Clock3,
-            note: "Keep your next decision on track",
+            note: "Readings still to enter for the latest trials",
+          },
+          {
+            label: "Ready for review",
+            value: readyForReview,
+            icon: Activity,
+            note: "Latest trial meets every target",
           },
         ].map((m) => (
           <div className={`${s.panel} ${c.stat}`} key={m.label}>
@@ -102,7 +111,7 @@ export function Projects() {
               <m.icon size={17} />
             </div>
             <div className={s.metric}>
-              {m.value.toString().padStart(2, "0")}
+              {m.value}
             </div>
             <small>{m.note}</small>
           </div>
@@ -115,19 +124,14 @@ export function Projects() {
               <FolderOpen size={19} />
             </div>
             <div>
-              <h3>Pick up where you left off</h3>
+              <h3>Unfinished brief</h3>
               <p>
-                {state.draft.name || "Untitled formulation"} · draft brief saved
-                locally
+                {state.draft.name || "Untitled project"} · saved in this browser
               </p>
             </div>
           </div>
           <Button
-            onClick={() =>
-              navigate(
-                `/projects/new/${state.draftStep === "mode" ? "category" : state.draftStep}`,
-              )
-            }
+            onClick={() => navigate(intakePath(state.draftStep))}
           >
             Continue brief
             <ArrowUpRight size={14} />
@@ -136,14 +140,14 @@ export function Projects() {
       )}
       <div className={s.between} style={{ marginBottom: 20 }}>
         <div className={s.row}>
-          <h2>Your projects</h2>
+          <h2>All projects</h2>
           <Badge>{state.projects.length}</Badge>
         </div>
         <div className={s.row}>
           <SearchBox
             value={query}
             onChange={setQuery}
-            placeholder="Search projects…"
+            placeholder="Search by name, category or owner"
           />
           <select
             aria-label="Project status filter"
@@ -181,19 +185,29 @@ export function Projects() {
             title={
               query
                 ? "No projects match your search"
-                : "Your next material starts here"
+                : "No projects yet"
             }
           >
-            <p>Create a formulation brief to start your research.</p>
-            <Button onClick={newProject}>
-              <Plus size={14} />
-              New formulation
-            </Button>
+            <p>
+              {query || filter !== "All projects"
+                ? "Try a different word or status."
+                : "Create a brief to start your first project."}
+            </p>
+            {query || filter !== "All projects" ? (
+              <Button onClick={() => { setQuery(""); setFilter("All projects"); }}>
+                Clear search
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={newProject}>
+                <Plus size={14} />
+                New project
+              </Button>
+            )}
           </Empty>
         </div>
       ) : grid ? (
         <div className={s.grid3}>
-          {projects.map((p, i) => (
+          {projects.map((p) => (
             <Link to={`/projects/${p.id}`} key={p.id} className={c.project}>
               <div className={s.between}>
                 <div className={c.projectIcon}>
@@ -201,32 +215,25 @@ export function Projects() {
                 </div>
                 <Status value={p.status} />
               </div>
-              <span className={c.projectCode}>
-                HLX — {String(i + 1).padStart(3, "0")}
-              </span>
+              <span className={c.projectCode}>{projectCode(p)}</span>
               <h2>{p.brief.name}</h2>
               <p>{subcategoryFor(p.brief.subcategoryId)?.name}</p>
               <div className={c.stage}>
-                <span>{p.stage}</span>
                 <span>
-                  {[
-                    "Literature",
-                    "Pathways",
-                    "Trials",
-                    "Results",
-                    "Analysis",
-                    "Final",
-                  ].indexOf(p.stage) + 1}{" "}
-                  of 6
+                  Step {currentStep(p).number}: {currentStep(p).name}
                 </span>
+                <span>of {procedure.length}</span>
               </div>
-              <div className={s.progress}>
+              <div className={s.progress} aria-hidden="true">
                 <span
                   style={{
-                    width: `${((["Literature", "Pathways", "Trials", "Results", "Analysis", "Final"].indexOf(p.stage) + 1) / 6) * 100}%`,
+                    width: `${(currentStep(p).number / procedure.length) * 100}%`,
                   }}
                 />
               </div>
+              {p.trials.length > 0 && (
+                <p className={c.outcome}>{projectOutcome(p, state.materials).headline}</p>
+              )}
               <footer>
                 <span>
                   <span className={c.avatar}>AM</span>
@@ -242,13 +249,12 @@ export function Projects() {
           <table className={s.table}>
             <thead>
               <tr>
-                <th>Project</th>
-                <th>Category</th>
-                <th>Owner</th>
-                <th>Status</th>
-                <th>Current stage</th>
-                <th>Updated</th>
-                <th />
+                <th scope="col">Project</th>
+                <th scope="col">Category</th>
+                <th scope="col">Owner</th>
+                <th scope="col">Status</th>
+                <th scope="col">Current step</th>
+                <th scope="col">Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -262,16 +268,10 @@ export function Projects() {
                   <td>
                     <Status value={p.status} />
                   </td>
-                  <td>{p.stage}</td>
-                  <td>{new Date(p.updated).toLocaleDateString()}</td>
                   <td>
-                    <Link
-                      to={`/projects/${p.id}`}
-                      aria-label={`Open ${p.brief.name}`}
-                    >
-                      <ArrowUpRight size={16} />
-                    </Link>
+                    {currentStep(p).number}. {currentStep(p).name}
                   </td>
+                  <td>{formatDate(p.updated)}</td>
                 </tr>
               ))}
             </tbody>
@@ -281,8 +281,11 @@ export function Projects() {
       <div className={s.panel} style={{ marginTop: 30 }}>
         <div className={s.panelHeader}>
           <h2>Recent activity</h2>
-          <Badge>Local demo history</Badge>
+          <Badge>Saved in this browser</Badge>
         </div>
+        {!state.projects.some((p) => p.activity.length) && (
+          <p className={s.muted}>No activity yet. Changes to your projects will appear here.</p>
+        )}
         {state.projects
           .flatMap((p) => p.activity.map((a) => ({ ...a, project: p })))
           .sort((a, b) => b.date.localeCompare(a.date))
@@ -301,10 +304,7 @@ export function Projects() {
                 <small>{a.project.brief.name}</small>
               </div>
               <time>
-                {new Date(a.date).toLocaleDateString("en", {
-                  month: "short",
-                  day: "numeric",
-                })}
+                {formatDate(a.date)}
               </time>
               <ChevronRight size={14} />
             </Link>

@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Copy, Download, LockKeyhole, Plus, RefreshCw } from "lucide-react";
+import { Copy, LockKeyhole, Plus, RefreshCw } from "lucide-react";
 import type { Project, RecipeRevision } from "../../domain/models";
-import { Badge, Button, Field, Modal, Notice, s } from "../../components/ui";
+import { Badge, Button, Empty, Field, Modal, Notice, Reason, s } from "../../components/ui";
+import { formatINR, formatNumber } from "../../lib/format";
 import { useWorkspace, uid } from "../../stores/workspace";
 import { recipeMetrics, TOTAL_TOLERANCE } from "../../domain/calculations";
-import { reports } from "../../services/demo/reports";
 import { propertyFor } from "../../data/property-library";
 import c from "../projects/Project.module.css";
 export function Trials({ project: p }: { project: Project }) {
@@ -110,28 +110,15 @@ export function Trials({ project: p }: { project: Project }) {
   }
   return (
     <div className={s.stack}>
-      <Notice warning>
-        Illustrative formulation and protocol · qualified R&D review required.
-        Composition basis: dry blend by weight. Application water is separate.
-        Total tolerance: ±{TOTAL_TOLERANCE}%.
-      </Notice>
-      {!canEdit && (
-        <Notice>
-          Your demo role can view recipes. Chemist or Admin can edit
-          compositions; presentation mode does not change permissions.
-        </Notice>
-      )}
-      <div className={s.between}>
-        <h3>Formulation matrix</h3>
+      <p className={s.muted} style={{ fontSize: 13 }}>
+        Quantities are dry-blend weight % and must add up to 100% (±
+        {TOTAL_TOLERANCE}%). Water is entered separately as a % of the dry
+        mass. Helix never rescales your numbers. The example recipe needs R&amp;D
+        review before use.
+      </p>
+      <div className={s.sectionTitle}>
+        <h3>Recipes {p.trials.length > 0 && <Badge>{p.trials.length} trials</Badge>}</h3>
         <div className={s.row}>
-          <Button
-            small
-            disabled={!p.trials.length}
-            onClick={() => reports.workbook(p)}
-          >
-            <Download size={13} />
-            Export trial sheet
-          </Button>
           <Button
             small
             variant="primary"
@@ -143,31 +130,39 @@ export function Trials({ project: p }: { project: Project }) {
             onClick={() => duplicate(p.trials.at(-1))}
           >
             <Plus size={13} />
-            Add trial
+            {p.trials.length ? "Add trial (copy latest)" : "Add first trial"}
           </Button>
         </div>
       </div>
+      {(!canEdit || !p.selectedPathway || p.brief.subcategoryId !== "tile-0") && (
+        <Reason>
+          {!canEdit
+            ? "You can view recipes. Only a Chemist or Admin can edit them; change your demo role in Settings."
+            : !p.selectedPathway
+              ? "Select a pathway in Design · Pathways before adding a trial."
+              : "This demo has no starting recipe for this product family. Your R&D team needs to add one."}
+        </Reason>
+      )}
       {!p.trials.length ? (
-        <div className={s.empty}>
-          <Flask />
-          <h3>
+        <Empty title={p.selectedPathway ? "No trials yet" : "Select a pathway first"}>
+          <p>
             {p.selectedPathway
-              ? "Ready for your first controlled trial."
-              : "Select a pathway before creating trials."}
-          </h3>
-          <p>A trial links a recipe revision, a batch, and a test plan.</p>
-        </div>
+              ? "Add your first trial to set its recipe, batch size and tests."
+              : "Trials start from the pathway you choose in the previous view."}
+          </p>
+        </Empty>
       ) : (
         <>
-          <div className={s.tableWrap}>
+          <p className={s.scrollHint}>Scroll sideways to see every trial →</p>
+          <div className={s.tableWrap} tabIndex={0} role="region" aria-label="Recipe matrix">
             <table className={s.table}>
               <thead>
                 <tr>
-                  <th>Ingredient / function</th>
-                  <th>Grade / supplier</th>
-                  <th>USD/kg / limits</th>
+                  <th scope="col">Ingredient</th>
+                  <th scope="col">Grade and supplier</th>
+                  <th scope="col" className={s.num}>Price (₹/kg) and limits</th>
                   {p.trials.map((t) => (
-                    <th key={t.id}>
+                    <th scope="col" key={t.id}>
                       <div className={s.row}>
                         {t.name}
                         {t.locked && <LockKeyhole size={11} />}
@@ -214,16 +209,18 @@ export function Trials({ project: p }: { project: Project }) {
                         {m.grade}
                         <small>{m.supplier}</small>
                       </td>
-                      <td>
-                        {m.price === null
-                          ? "Price missing"
-                          : m.price.toFixed(2)}
+                      <td className={s.num}>
+                        {m.price === null || m.currency !== "INR" ? (
+                          <Badge tone="amber">No ₹ price</Badge>
+                        ) : (
+                          formatINR(m.price)
+                        )}
                         <small>
-                          {m.min}–{m.max} wt % · {m.priceDate}
+                          Allowed {m.min}–{m.max}%
                         </small>
                       </td>
                       {p.trials.map((t) => (
-                        <td key={t.id}>
+                        <td key={t.id} className={s.num}>
                           <input
                             aria-label={`${t.name} ${m.name} percentage`}
                             type="number"
@@ -247,22 +244,20 @@ export function Trials({ project: p }: { project: Project }) {
                           />{" "}
                           <span className={s.muted}>%</span>
                           <small>
-                            {(
-                              ((t.percentages[m.id] || 0) * t.batchKg) /
-                              100
-                            ).toFixed(3)}{" "}
+                            {formatNumber(
+                              ((t.percentages[m.id] || 0) * t.batchKg) / 100,
+                              3,
+                            )}{" "}
                             kg
                           </small>
                         </td>
                       ))}
                     </tr>
                   ))}
-                <tr>
-                  <td>
-                    <b>Total dry blend</b>
-                  </td>
+                <tr className={s.totalRow}>
+                  <td>Total dry blend</td>
                   <td />
-                  <td>Required: 100%</td>
+                  <td className={s.num}>Must be 100%</td>
                   {p.trials.map((t) => {
                     const m = recipeMetrics(
                       t,
@@ -271,7 +266,7 @@ export function Trials({ project: p }: { project: Project }) {
                       p.brief.constraints.excluded,
                     );
                     return (
-                      <td key={t.id}>
+                      <td key={t.id} className={s.num}>
                         <b
                           style={{
                             color: m.errors.length
@@ -283,19 +278,19 @@ export function Trials({ project: p }: { project: Project }) {
                         </b>
                         <small>
                           {m.cost === null
-                            ? "Incomplete cost"
-                            : `USD ${m.cost.toFixed(3)}/kg`}
+                            ? "Cost incomplete"
+                            : `${formatINR(m.cost)}/kg`}
                         </small>
                       </td>
                     );
                   })}
                 </tr>
                 <tr>
-                  <td>Dry batch size</td>
+                  <td>Batch size (dry)</td>
                   <td />
-                  <td>kg</td>
+                  <td className={s.num}>kg</td>
                   {p.trials.map((t) => (
-                    <td key={t.id}>
+                    <td key={t.id} className={s.num}>
                       <input
                         type="number"
                         min="0.01"
@@ -315,10 +310,10 @@ export function Trials({ project: p }: { project: Project }) {
                 </tr>
                 <tr>
                   <td>Application water</td>
-                  <td>Separate from dry composition</td>
-                  <td>% of dry mass</td>
+                  <td>Not part of the 100%</td>
+                  <td className={s.num}>% of dry mass</td>
                   {p.trials.map((t) => (
-                    <td key={t.id}>
+                    <td key={t.id} className={s.num}>
                       <input
                         type="number"
                         min="0"
@@ -334,14 +329,14 @@ export function Trials({ project: p }: { project: Project }) {
                         }
                       />
                       <small>
-                        {((t.batchKg * t.water) / 100).toFixed(3)} kg water
+                        {formatNumber((t.batchKg * t.water) / 100, 3)} kg water
                       </small>
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td>Constraint checks</td>
-                  <td colSpan={2}>No automatic normalization</td>
+                  <td>Checks</td>
+                  <td colSpan={2}>Limits, total, cost ceiling and excluded materials</td>
                   {p.trials.map((t) => {
                     const m = recipeMetrics(
                       t,
@@ -361,11 +356,11 @@ export function Trials({ project: p }: { project: Project }) {
                             </small>
                           ))
                         ) : (
-                          <Badge tone="green">Numerical checks pass</Badge>
+                          <Badge tone="green">All checks pass</Badge>
                         )}
                         {m.cost === null && (
                           <small className={s.error}>
-                            Missing price · incomplete cost
+                            An ingredient has no ₹ price, so cost is incomplete
                           </small>
                         )}
                       </td>
@@ -377,7 +372,7 @@ export function Trials({ project: p }: { project: Project }) {
           </div>
           <div className={c.protocol}>
             <section>
-              <h3>01 / Mixing protocol</h3>
+              <h3>How to mix</h3>
               <Badge tone="amber">Illustrative · review before use</Badge>
               <ol>
                 <li>
@@ -396,70 +391,37 @@ export function Trials({ project: p }: { project: Project }) {
                 </li>
               </ol>
               <div className={s.formGrid} style={{ marginTop: 15 }}>
-                <Field label="Mix time (min)">
-                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                    <input
-                      type="range"
-                      min="0"
-                      max="60"
-                      value={p.trials.at(-1)?.mixTime || "0"}
-                      disabled={!canEdit || p.trials.at(-1)?.locked}
-                      onChange={(e) =>
-                        update(p.trials.at(-1)!.id, (t) => ({
-                          ...t,
-                          mixTime: e.target.value,
-                        }))
-                      }
-                      style={{ flex: 1 }}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      value={p.trials.at(-1)?.mixTime || ""}
-                      placeholder="R&D to specify"
-                      disabled={!canEdit || p.trials.at(-1)?.locked}
-                      onChange={(e) =>
-                        update(p.trials.at(-1)!.id, (t) => ({
-                          ...t,
-                          mixTime: e.target.value,
-                        }))
-                      }
-                      style={{ width: "90px" }}
-                    />
-                  </div>
+                <Field label={`Mix time for ${p.trials.at(-1)?.name.split(" · ")[0]}`} unit="min" optional hint="Set by R&D for your mixer.">
+                  <input
+                    type="number"
+                    min="0"
+                    inputMode="decimal"
+                    value={p.trials.at(-1)?.mixTime || ""}
+                    placeholder="Not set"
+                    disabled={!canEdit || p.trials.at(-1)?.locked}
+                    onChange={(e) =>
+                      update(p.trials.at(-1)!.id, (t) => ({
+                        ...t,
+                        mixTime: e.target.value,
+                      }))
+                    }
+                  />
                 </Field>
-                <Field label="Mixer speed (rpm)">
-                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                    <input
-                      type="range"
-                      min="0"
-                      max="3000"
-                      step="50"
-                      value={p.trials.at(-1)?.mixSpeed || "0"}
-                      disabled={!canEdit || p.trials.at(-1)?.locked}
-                      onChange={(e) =>
-                        update(p.trials.at(-1)!.id, (t) => ({
-                          ...t,
-                          mixSpeed: e.target.value,
-                        }))
-                      }
-                      style={{ flex: 1 }}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      value={p.trials.at(-1)?.mixSpeed || ""}
-                      placeholder="Equipment dependent"
-                      disabled={!canEdit || p.trials.at(-1)?.locked}
-                      onChange={(e) =>
-                        update(p.trials.at(-1)!.id, (t) => ({
-                          ...t,
-                          mixSpeed: e.target.value,
-                        }))
-                      }
-                      style={{ width: "100px" }}
-                    />
-                  </div>
+                <Field label="Mixer speed" unit="rpm" optional hint="Depends on the equipment.">
+                  <input
+                    type="number"
+                    min="0"
+                    inputMode="decimal"
+                    value={p.trials.at(-1)?.mixSpeed || ""}
+                    placeholder="Not set"
+                    disabled={!canEdit || p.trials.at(-1)?.locked}
+                    onChange={(e) =>
+                      update(p.trials.at(-1)!.id, (t) => ({
+                        ...t,
+                        mixSpeed: e.target.value,
+                      }))
+                    }
+                  />
                 </Field>
               </div>
               <p style={{ marginTop: 14 }}>
@@ -469,10 +431,10 @@ export function Trials({ project: p }: { project: Project }) {
               </p>
             </section>
             <section>
-              <h3>02 / Test plan & conditioning</h3>
+              <h3>Tests to run</h3>
               <p>
-                Three specimen readings per property. Exact specimen geometry
-                and method suitability require R&D confirmation.
+                Three specimen readings per test. R&amp;D must confirm specimen
+                size and method.
               </p>
               <div className={s.list} style={{ marginTop: 14 }}>
                 {p.testPlan.map((t) => (
@@ -483,9 +445,9 @@ export function Trials({ project: p }: { project: Project }) {
                     <p>
                       {t.specimens} specimens ·{" "}
                       {t.ageDays === 0
-                        ? "Fresh state"
-                        : `${t.ageDays}-day condition`}{" "}
-                      · {t.required ? "Mandatory" : "Optional"}
+                        ? "Fresh (tested straight after mixing)"
+                        : `After ${t.ageDays} days of curing`}{" "}
+                      · {t.required ? "Required" : "Optional"}
                     </p>
                     <p>{t.condition}</p>
                   </div>
@@ -552,7 +514,4 @@ export function Trials({ project: p }: { project: Project }) {
       )}
     </div>
   );
-}
-function Flask() {
-  return <Plus size={27} />;
 }

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowUpRight, RotateCw, X, Play } from "lucide-react";
 import { Badge, Button, Empty, Notice, Status, s } from "../../components/ui";
 import { useWorkspace } from "../../stores/workspace";
+import { stageTitle } from "../../data/procedure";
 export function TaskQueue() {
   const state = useWorkspace(),
     [filter, setFilter] = useState("All jobs");
@@ -10,13 +11,10 @@ export function TaskQueue() {
     <>
       <div className={s.pageHeader}>
         <div>
-          <div className={s.eyebrow} style={{ marginBottom: 10 }}>
-            KEEP THE WORK MOVING
-          </div>
           <h1>Task queue</h1>
           <p>
-            Research and formulation simulations, with a traceable execution
-            history.
+            Background searches started from a project. They keep running while
+            you work on other pages.
           </p>
         </div>
         <Button
@@ -26,15 +24,13 @@ export function TaskQueue() {
           }
         >
           <Play size={14} />
-          Demonstrate failed job
+          Show a failed task (demo)
         </Button>
       </div>
       <div className={s.stack}>
         <Notice>
-          Jobs are deterministic local simulations. They continue across
-          navigation; elapsed time is reconciled after a refresh. Progress
-          reflects fixture playback, not scientific work or live backend
-          processing.
+          In this demo, tasks replay example data in about 6 seconds. They
+          continue if you leave the page or refresh.
         </Notice>
         <div className={s.tabs}>
           {[
@@ -47,6 +43,7 @@ export function TaskQueue() {
           ].map((v) => (
             <button
               key={v}
+              aria-pressed={filter === v}
               className={filter === v ? s.active : ""}
               onClick={() => setFilter(v)}
             >
@@ -60,12 +57,12 @@ export function TaskQueue() {
             <table className={s.table}>
               <thead>
                 <tr>
-                  <th>Job / project</th>
-                  <th>Stage</th>
-                  <th>Status</th>
-                  <th>Progress</th>
-                  <th>Started / finished</th>
-                  <th>Actions</th>
+                  <th scope="col">Task and project</th>
+                  <th scope="col">Step</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Progress</th>
+                  <th scope="col">Started and finished</th>
+                  <th scope="col">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -87,7 +84,7 @@ export function TaskQueue() {
                           </small>
                         )}
                       </td>
-                      <td>{j.stage}</td>
+                      <td>{stageTitle(j.stage)}</td>
                       <td>
                         <Status value={j.status} />
                       </td>
@@ -95,7 +92,7 @@ export function TaskQueue() {
                         <div className={s.progress}>
                           <span style={{ width: `${j.progress}%` }} />
                         </div>
-                        <small>{j.progress}% fixture playback</small>
+                        <small>{j.progress}%</small>
                       </td>
                       <td>
                         {new Date(j.started).toLocaleTimeString()}
@@ -130,7 +127,7 @@ export function TaskQueue() {
                               className={s.button}
                               to={`/projects/${j.projectId}?stage=${j.stage}`}
                             >
-                              Review results
+                              View results
                               <ArrowUpRight size={12} />
                             </Link>
                           )}
@@ -143,14 +140,14 @@ export function TaskQueue() {
           </div>
         ) : (
           <div className={s.panel}>
-            <Empty title="A little quiet in the queue">
+            <Empty title={filter === "All jobs" ? "No tasks yet" : `No ${filter.toLowerCase()} tasks`}>
               <p>
-                Start a research simulation from a project’s Literature stage.
+                Tasks start when you select “Find sources” (Read) or “Suggest
+                pathways” (Design) in a project.
               </p>
-              <Badge>
-                No {filter === "All jobs" ? "active" : filter.toLowerCase()}{" "}
-                jobs
-              </Badge>
+              <Link className={s.button} to="/projects">
+                Go to projects
+              </Link>
             </Empty>
           </div>
         )}

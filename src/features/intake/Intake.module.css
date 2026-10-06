@@ -1,378 +1,413 @@
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 292px;
-  gap: 28px;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
   align-items: start;
+  margin-top: 24px;
 }
-.stepper {
-  display: flex;
-  margin-bottom: 34px;
-  gap: 0;
-}
-.step {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 11px;
-  color: var(--muted);
-  flex: 1;
-  position: relative;
-}
-.step:not(:last-child)::after {
-  content: "";
-  height: 1px;
-  background: var(--border);
-  flex: 1;
-  margin: 0 14px;
-}
-.stepNumber {
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  font-size: 11px;
-  background: var(--surface);
-  flex-shrink: 0;
-}
-.current {
+.phase {
+  font-size: 12px;
+  font-weight: 600;
   color: var(--accent);
-  font-weight: 500;
-}
-.current .stepNumber {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
-}
-.done .stepNumber {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: transparent;
+  margin-bottom: 6px;
 }
 .sectionTitle {
-  margin-bottom: 26px;
+  margin-bottom: 22px;
 }
 .sectionTitle h2 {
-  font-size: 22px;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .sectionTitle p {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
-  margin-top: 8px;
+  margin-top: 6px;
 }
-.cardGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.optionalTag {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--secondary);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+.helper {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 72ch;
+}
+.helper b {
+  color: var(--text);
+  font-weight: 600;
+}
+.fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
-  margin-top: 20px;
 }
-.category {
-  padding: 22px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  text-align: left;
-  position: relative;
+.fieldset + .fieldset {
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+.fieldset legend {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gate {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  min-height: 185px;
+  gap: 10px;
+  padding: 28px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--secondary);
 }
+.gate svg {
+  color: var(--amber);
+}
+.gate p {
+  font-size: 13px;
+  color: var(--muted);
+}
+.errorSummary {
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
+  background: var(--red-soft);
+  color: var(--red);
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+.errorSummary:focus {
+  outline: 3px solid color-mix(in srgb, var(--red) 40%, transparent);
+}
+.errorSummary ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.categoryCard,
+.subCard,
+.category {
+  position: relative;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.categoryCard {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  min-height: 76px;
+}
+.categoryCard b,
+.subCard b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.categoryCard small,
+.subCard small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+  line-height: 1.45;
+}
+.categoryCard:hover,
+.subCard:hover,
 .category:hover {
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
 }
 .selected {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent-soft) 40%, var(--surface));
+  border-color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent-soft) 45%, var(--surface));
   box-shadow: 0 0 0 1px var(--accent);
 }
+.tick {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  color: var(--accent);
+}
 .icon {
-  width: 37px;
-  height: 37px;
+  width: 34px;
+  height: 34px;
   background: var(--secondary);
   border-radius: 8px;
   display: grid;
   place-items: center;
   color: var(--muted);
-  margin-bottom: 18px;
+  flex-shrink: 0;
 }
 .selected .icon {
   background: var(--accent-soft);
   color: var(--accent);
 }
-.category h3 {
-  font-size: 13px;
-  line-height: 1.5;
+.filterRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px 160px;
+  gap: 10px;
 }
-.category p {
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 5px;
+.subList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
-.category small {
-  color: var(--muted);
-  font-size: 11px;
-  margin-top: 18px;
+.subCard {
+  padding: 14px 40px 14px 14px;
 }
 .radio {
   position: absolute;
-  right: 19px;
-  top: 19px;
-  width: 15px;
-  height: 15px;
+  right: 14px;
+  top: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   border: 1px solid var(--border);
   display: grid;
   place-items: center;
-  color: var(--on-accent);
+  background: var(--surface);
 }
 .selected .radio {
   background: var(--accent);
   border-color: var(--accent);
+  color: var(--on-accent);
+}
+.summary {
+  padding: 16px 18px;
+  background: var(--secondary);
+  border-radius: 10px;
+}
+.summary span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.summary p {
+  font-size: 14px;
+  margin-top: 4px;
+}
+.review {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.reviewSection {
+  padding: 16px 18px;
+}
+.reviewSection + .reviewSection {
+  border-top: 1px solid var(--border);
+}
+.reviewSection h3 {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.reviewSection h3 svg {
+  color: var(--green);
+}
+.reviewProblem {
+  background: color-mix(in srgb, var(--red-soft) 60%, transparent);
+}
+.reviewProblem h3 svg {
+  color: var(--red);
+}
+.reviewSection p {
+  font-size: 13px;
+  margin-top: 6px;
+  white-space: pre-line;
 }
 .preview {
   position: sticky;
-  top: 100px;
+  top: 84px;
   border: 1px solid var(--border);
+  border-radius: var(--radius);
   background: var(--surface);
-  border-radius: 11px;
-  overflow: hidden;
 }
 .previewHeader {
-  padding: 22px;
-  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
 }
 .previewHeader h3 {
-  font-size: 13px;
-}
-.previewHeader svg {
-  color: var(--accent);
+  font-size: 14px;
+  flex: 1;
 }
 .previewBody {
-  padding: 22px;
+  margin: 0;
+  padding: 6px 18px 14px;
 }
 .previewItem {
-  margin-bottom: 22px;
+  padding: 10px 0;
 }
-.previewItem:last-child {
-  margin-bottom: 0;
+.previewItem + .previewItem {
+  border-top: 1px solid var(--border);
 }
-.previewItem small {
-  display: block;
+.previewItem dt {
   font-size: 11px;
   color: var(--muted);
-  margin-bottom: 7px;
 }
-.previewItem p {
-  font-size: 12px;
+.previewItem dd {
+  margin: 2px 0 0;
+  font-size: 13px;
 }
 .placeholder {
   color: var(--muted);
-  font-size: 11px !important;
+  font-style: italic;
 }
-.previewFooter {
-  background: var(--secondary);
-  padding: 16px 22px;
-  font-size: 11px;
-  color: var(--muted);
-  line-height: 1.7;
+.onboarding {
+  max-width: 760px;
+  margin: 24px auto;
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 18px;
 }
-.actions {
+.cardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.category {
+  padding: 22px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 24px;
-  margin-top: 28px;
-  border-top: 1px solid var(--border);
+  flex-direction: column;
+  align-items: flex-start;
 }
-.modeCard {
-  padding: 28px 24px;
-  min-height: 250px;
+.category h3 {
+  font-size: 15px;
+  margin-top: 14px;
 }
-.modeCard h3 {
-  font-size: 18px;
-}
-.modeCard p {
+.category p {
   font-size: 13px;
-  margin-top: 11px;
+  color: var(--muted);
+  margin-top: 4px;
 }
 .modeCard ul {
   list-style: none;
-  padding: 20px 0 0;
-  margin: 20px 0 0;
-  border-top: 1px solid var(--border);
-  width: 100%;
+  padding: 0;
+  margin: 16px 0 0;
   display: flex;
   flex-direction: column;
-  gap: 13px;
+  gap: 8px;
+  font-size: 13px;
 }
 .modeCard li {
   display: flex;
-  align-items: center;
   gap: 8px;
-  font-size: 11px;
-  color: var(--muted);
+  align-items: center;
 }
-.modeCard .icon {
-  width: 46px;
-  height: 46px;
-  margin-bottom: 24px;
+.modeCard li svg {
+  color: var(--green);
 }
-.subList {
+.targetList {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 18px;
 }
-.subCard {
-  min-height: 0;
-  padding: 18px 21px;
-}
-.subCard p {
-  padding-right: 30px;
-}
-.subCard .radio {
-  top: 22px;
-}
-.filterRow {
+.targetCard {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
   display: flex;
-  gap: 10px;
-  margin: 16px 0;
+  flex-direction: column;
+  gap: 12px;
 }
-.filterRow select {
-  font-size: 11px;
-  flex: 1;
+.targetInvalid {
+  border-color: color-mix(in srgb, var(--red) 55%, var(--border));
 }
-.briefTabs {
+.targetHead {
   display: flex;
-  border-bottom: 1px solid var(--border);
-  gap: 28px;
-  margin-bottom: 26px;
-  overflow: auto;
+  justify-content: space-between;
+  gap: 12px;
 }
-.briefTabs button {
-  border: 0;
-  background: none;
-  padding: 0 0 13px;
+.targetHead b {
+  font-size: 14px;
+}
+.targetHead small {
+  display: block;
   font-size: 12px;
   color: var(--muted);
-  white-space: nowrap;
+  margin-top: 2px;
 }
-.briefTabs .tabActive {
+.targetFields {
+  display: grid;
+  grid-template-columns: 150px repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+.methodDetails summary {
+  font-size: 12px;
   color: var(--accent);
-  border-bottom: 2px solid var(--accent);
+  cursor: pointer;
+  width: max-content;
 }
-.summary {
-  margin-top: 24px;
-  padding: 20px;
-  background: var(--secondary);
-  border-radius: 8px;
-}
-.summary p {
-  font-size: 13px;
-  margin-top: 8px;
-  line-height: 1.8;
-}
-.reviewSection {
-  padding: 20px 0;
-  border-bottom: 1px solid var(--border);
-}
-.reviewSection:first-child {
-  padding-top: 0;
-}
-.reviewSection p {
-  font-size: 12px;
-  margin-top: 10px;
-  color: var(--muted);
-}
-.reviewSection h3 {
-  font-size: 13px;
+.methodDetails > div {
+  margin-top: 12px;
 }
 .rank {
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 12px;
 }
 .rank span {
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 11px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 .rank select {
   flex: 1;
-  font-size: 12px;
 }
 @media (max-width: 1150px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr) 250px;
-    gap: 20px;
-  }
-  .step {
-    font-size: 11px;
-  }
-  .step:not(:last-child)::after {
-    margin: 0 8px;
-  }
-  .category {
-    padding: 18px;
-  }
-  .previewBody,
-  .previewHeader {
-    padding: 18px;
-  }
-}
-@media (max-width: 1000px) {
   .layout {
     grid-template-columns: 1fr;
   }
   .preview {
     position: static;
   }
-  .previewBody {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-  .previewItem {
-    margin: 0;
-  }
-  .modeCard {
-    min-height: 320px;
+  .categoryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@media (max-width: 600px) {
+@media (max-width: 700px) {
+  .categoryGrid,
+  .subList,
   .cardGrid {
     grid-template-columns: 1fr;
   }
-  .step {
-    font-size: 11px;
-    gap: 5px;
+  .filterRow {
+    grid-template-columns: 1fr 1fr;
   }
-  .stepNumber {
-    width: 20px;
-    height: 20px;
+  .filterRow > :first-child {
+    grid-column: 1 / -1;
   }
-  .step:not(:last-child)::after {
-    margin: 0 5px;
-  }
-  .actions {
-    gap: 12px;
-  }
-  .actions > div {
-    gap: 5px;
-  }
-  .briefTabs {
-    gap: 20px;
+  .targetFields {
+    grid-template-columns: 1fr 1fr;
   }
 }

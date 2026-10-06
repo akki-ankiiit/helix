@@ -167,11 +167,7 @@ export function Login() {
     if (!existing) store.login();
     const state = useWorkspace.getState();
     navigate(
-      state.user?.mode
-        ? state.draft.name || state.draft.categoryId
-          ? `/projects/new/${state.draftStep === "mode" ? "category" : state.draftStep}`
-          : "/projects"
-        : "/onboarding/mode",
+      "/projects",
     );
   }
   return (

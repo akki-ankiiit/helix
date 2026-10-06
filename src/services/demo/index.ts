@@ -9,6 +9,7 @@ import { fixtureSources } from "../../data/fixtures/workspace";
 import { useWorkspace } from "../../stores/workspace";
 import { evaluate } from "../../domain/calculations";
 import { propertyFor } from "../../data/property-library";
+import { formatINR, formatMeasured } from "../../lib/format";
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export const authentication: AuthenticationService = {
   async signIn() {
@@ -79,7 +80,7 @@ export const askHelix: AskService = {
           evaluations
             .map(
               ({ t, e }) =>
-                `${propertyFor(t.propertyId).plain}: ${e.status}${e.mean !== null ? ` (${e.mean.toFixed(2)} ${t.unit})` : ""}.`,
+                `${propertyFor(t.propertyId).plain}: ${e.status}${e.mean !== null ? ` (${formatMeasured(e.mean, p.results.find((r) => r.trialId === trial?.id && r.propertyId === t.propertyId)?.readings)} ${t.unit})` : ""}.`,
             )
             .join(" ") +
           " These are illustrative demo records. Passing these targets does not establish a certified classification.",
@@ -92,15 +93,15 @@ export const askHelix: AskService = {
           ? p.pathways
               .map(
                 (x) =>
-                  `${x.name}: estimated $${x.cost.toFixed(2)}/kg; ${x.rationale}`,
+                  `${x.name}: estimated ${formatINR(x.cost)}/kg; ${x.rationale}`,
               )
               .join(" ") +
             " Scores are illustrative heuristics, not validated predictions."
-          : "No pathways are available yet. Complete the literature step first.",
+          : "No pathways are available yet. Complete step 2, Read, first.",
         citation: "Pathway fixture · low confidence",
       };
     return {
-      answer: `${p.brief.name} is a ${p.brief.useCase.environment?.toLowerCase() || ""} project with ${p.brief.targets.length} targets and ${p.brief.benchmarkIds.length} benchmark(s). ${p.trials.length} trial revisions are retained. ${p.brief.constraints.cost ? `Cost ceiling: ${p.brief.constraints.currency} ${p.brief.constraints.cost}/kg.` : "No exact cost ceiling is set."} ${p.needsReview ? "Downstream analysis needs review." : "See the test grid for measured evidence."}`,
+      answer: `${p.brief.name} is a ${p.brief.useCase.environment?.toLowerCase() || ""} project with ${p.brief.targets.length} targets and ${p.brief.benchmarkIds.length} benchmark(s). ${p.trials.length} trial revisions are retained. ${p.brief.constraints.cost ? `Cost ceiling: ${p.brief.constraints.currency && p.brief.constraints.currency !== "INR" ? `${p.brief.constraints.currency} ${p.brief.constraints.cost}` : formatINR(Number(p.brief.constraints.cost))}/kg.` : "No exact cost ceiling is set."} ${p.needsReview ? "Downstream analysis needs review." : "See the test grid for measured evidence."}`,
       citation: `Project brief v${p.revisions.length} · local demo records`,
     };
   },

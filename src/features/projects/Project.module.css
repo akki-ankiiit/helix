@@ -1,14 +1,9 @@
 .header {
-  margin-bottom: 24px;
-}
-.code {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 .titleRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
 }
@@ -16,123 +11,121 @@
   font-size: 26px;
 }
 .meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   color: var(--muted);
-  font-size: 11px;
-  margin-top: 13px;
-  flex-wrap: wrap;
+  font-size: 13px;
+  margin-top: 6px;
 }
-.brief {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  margin-bottom: 23px;
-  position: sticky;
-  top: 83px;
-  z-index: 20;
-  box-shadow: var(--shadow);
-}
-.briefToggle {
+.headerActions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: none;
-  border: 0;
-  width: 100%;
-  padding: 16px 20px;
-  font-size: 12px;
-}
-.briefContent {
-  padding: 0 20px 20px;
-  border-top: 1px solid var(--border);
-}
-.briefContent p {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 15px;
-}
-.pipeline {
-  display: flex;
-  align-items: center;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: 10px;
-  margin-bottom: 24px;
-  overflow: auto;
-  padding: 6px;
-}
-.pipeline button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   gap: 8px;
-  flex: 1;
-  white-space: nowrap;
-  background: none;
-  border: 0;
-  font-size: 11px;
-  padding: 13px 12px;
-  color: var(--muted);
-  border-radius: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
-.pipeline button.current {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.pipeline button.completed {
-  color: var(--green);
-}
-.stage {
+.outcomeStrip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
   border: 1px solid var(--border);
-  border-radius: 11px;
   background: var(--surface);
-  margin-bottom: 13px;
-  overflow: hidden;
+  font-size: 13px;
 }
-.stageHead {
-  width: 100%;
-  background: none;
-  border: 0;
-  text-align: left;
-  padding: 19px 22px;
-  display: flex;
+.outcomeStrip:hover {
+  border-color: var(--accent);
+}
+.outcomeStrip > span:nth-child(2) {
+  flex: 1;
+}
+.outcomeLink {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 15px;
+  gap: 4px;
+  color: var(--accent);
+  font-weight: 500;
+  white-space: nowrap;
 }
-.stageHead h2 {
-  font-size: 15px;
+.outcome_approved,
+.outcome_ready,
+.outcome_review {
+  border-left: 4px solid var(--green);
 }
-.stageHead small {
-  display: block;
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 5px;
+.outcome_failing {
+  border-left: 4px solid var(--red);
 }
-.stageIcon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--secondary);
-  color: var(--muted);
-  display: grid;
-  place-items: center;
+.outcome_incomplete,
+.outcome_no-trial {
+  border-left: 4px solid var(--amber);
 }
-.stageOpen .stageIcon {
-  background: var(--accent-soft);
+.stepBody {
+  margin-top: 16px;
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.stepHeading {
+  margin-bottom: 18px;
+}
+.stepHeading h2 {
+  font-size: 22px;
+}
+.stepHeading p {
+  margin-top: 4px;
+}
+.stepEyebrow {
+  font-size: 12px;
+  font-weight: 600;
   color: var(--accent);
 }
-.stageBody {
-  border-top: 1px solid var(--border);
-  padding: 24px;
+.stageDescription {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 16px 0 20px;
+  max-width: 80ch;
 }
-.sectionHeading {
+.stageContent {
+  min-height: 160px;
+}
+.briefGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 28px;
+}
+.briefGrid h3 {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.briefGrid p {
+  font-size: 14px;
+  margin-top: 4px;
+}
+.activity {
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0 22px;
+}
+.activity > summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 25px 0 16px;
+  gap: 12px;
+  min-height: 56px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+.activity[open] {
+  padding-bottom: 22px;
+}
+.activity h3 {
+  font-size: 13px;
+  margin-bottom: 8px;
 }
 .sequence {
   display: flex;
@@ -373,17 +366,8 @@
   .protocol {
     grid-template-columns: 1fr;
   }
-  .stageBody {
-    padding: 19px;
-  }
-  .pipeline button {
-    padding: 12px 10px;
-  }
 }
 @media (max-width: 650px) {
-  .brief {
-    position: static;
-  }
   .evaluation {
     flex-wrap: wrap;
   }
@@ -397,10 +381,69 @@
   .sequence {
     padding: 15px;
   }
-  .stageHead {
-    padding: 15px;
+}
+@media (max-width: 1050px) {
+  .titleRow {
+    flex-direction: column;
   }
-  .stageHead small {
-    max-width: 190px;
+  .headerActions {
+    justify-content: flex-start;
   }
+}
+@media (max-width: 700px) {
+  .stepBody {
+    padding: 18px 14px;
+  }
+  .briefGrid {
+    grid-template-columns: 1fr;
+  }
+  .titleRow h1 {
+    font-size: 22px;
+  }
+  .outcomeStrip {
+    flex-wrap: wrap;
+  }
+  .activity {
+    padding: 0 14px;
+  }
+}
+.scores {
+  margin: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.scores div {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+}
+.scores dt {
+  color: var(--muted);
+}
+.scores dd {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 26px;
+  gap: 8px;
+  align-items: center;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.scoreBar {
+  display: block;
+  height: 6px;
+  border-radius: 4px;
+  background: var(--secondary);
+  overflow: hidden;
+}
+.scoreBar span {
+  display: block;
+  height: 100%;
+  background: var(--chart-muted);
+}
+.selected .scoreBar span {
+  background: var(--accent);
 }

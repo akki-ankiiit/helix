@@ -2,8 +2,24 @@ import * as XLSX from "xlsx";
 import type { Project } from "../../domain/models";
 import type { ReportService } from "../contracts";
 import { propertyFor } from "../../data/property-library";
-import { evaluate, recipeMetrics } from "../../domain/calculations";
+import {
+  costBreakdown,
+  evaluate,
+  projectOutcome,
+  recipeMetrics,
+  approvalChecks,
+} from "../../domain/calculations";
 import { useWorkspace } from "../../stores/workspace";
+import {
+  USD_TO_INR,
+  conversionNote,
+  formatDate,
+  formatINR,
+  formatMeasured,
+  formatNumber,
+  toPaise,
+} from "../../lib/format";
+
 const escape = (s: unknown) =>
   String(s ?? "").replace(
     /[&<>"']/g,
@@ -12,26 +28,131 @@ const escape = (s: unknown) =>
         c
       ]!,
   );
+
+const short = (name?: string) => name?.split(" · ")[0] || "—";
+
+/** Shared report content so the PDF, the workbook and the screen agree. */
+function reportData(project: Project) {
+  const materials = useWorkspace.getState().materials;
+  const trial = project.trials.at(-1);
+  const prev = trial
+    ? project.trials.find((t) => t.id === trial.parentId) ||
+      project.trials[project.trials.indexOf(trial) - 1]
+    : undefined;
+  const outcome = projectOutcome(project, materials);
+  const metrics = trial ? recipeMetrics(trial, materials) : null;
+  const lines = trial ? costBreakdown(trial, materials) : [];
+  const checks = approvalChecks(project, trial, materials);
+  const rows = project.brief.targets.map((t) => {
+    const find = (id?: string) =>
+      project.results.find(
+        (r) => r.trialId === id && r.propertyId === t.propertyId,
+      );
+    const latest = find(trial?.id),
+      before = find(prev?.id);
+    const now = evaluate(t, latest),
+      was = prev ? evaluate(t, before) : null;
+    return {
+      name: propertyFor(t.propertyId).name,
+      unit: t.unit,
+      method: t.method,
+      condition: t.condition,
+      priority: t.priority,
+      target: `${t.operator} ${t.value}${t.operator === "Between" ? `–${t.max}` : ""}`,
+      estimate:
+        project.pathways.find((p) => p.id === project.selectedPathway)
+          ?.predictions[t.propertyId] ?? null,
+      previous: was ? formatMeasured(was.mean, before?.readings) : null,
+      latest: formatMeasured(now.mean, latest?.readings),
+      status: now.status,
+    };
+  });
+  return { trial, prev, outcome, metrics, lines, checks, rows };
+}
+
 export const reports: ReportService = {
   workbook(project) {
     const book = XLSX.utils.book_new();
-    const rows = [
+    const { trial, prev, outcome, metrics, lines, checks, rows } =
+      reportData(project);
+    const summary = [
       ["HELIX · ILLUSTRATIVE DEMO · R&D REVIEW REQUIRED"],
       ["Project", project.brief.name],
-      ["Brief revision", project.revisions.length],
-      ["Composition basis", "Dry blend; application water separate"],
-      ["Cost currency", project.brief.constraints.currency],
+      ["Brief version", project.revisions.length],
+      ["Exported", formatDate(Date.now())],
       [],
+      ["Recommendation", outcome.headline],
+      ["What it means", outcome.explanation],
+      ["Targets met", `${outcome.passCount} of ${outcome.total}`],
       [
-        "Property",
-        "Unit",
-        "Method",
-        "Condition",
-        "Operator",
-        "Target",
-        "Upper",
-        "Priority",
+        "Material cost (INR per kg dry blend)",
+        metrics?.cost == null ? "Incomplete" : toPaise(metrics.cost),
       ],
+      [
+        "Batch cost (INR, one batch)",
+        metrics?.cost == null || !trial
+          ? "Incomplete"
+          : toPaise(metrics.cost * trial.batchKg),
+      ],
+      ["Recipe", trial?.name || "None"],
+      ["Open checks before approval", checks.length],
+      ...checks.map((c) => ["", `${c.message}. ${c.fix}`]),
+      [],
+      ["Currency", "INR (₹). GST and delivery not included."],
+      [
+        "Exchange rate",
+        `₹${USD_TO_INR.rate} = US$1 · ${USD_TO_INR.source}`,
+      ],
+    ];
+    XLSX.utils.book_append_sheet(
+      book,
+      XLSX.utils.aoa_to_sheet(summary),
+      "Summary",
+    );
+    XLSX.utils.book_append_sheet(
+      book,
+      XLSX.utils.aoa_to_sheet([
+        [
+          "Test",
+          "Unit",
+          "Method",
+          "Condition",
+          "Priority",
+          "Target",
+          "Estimate",
+          `${short(prev?.name)} mean`,
+          `${short(trial?.name)} mean`,
+          "Result",
+        ],
+        ...rows.map((r) => [
+          r.name,
+          r.unit,
+          r.method,
+          r.condition,
+          r.priority,
+          r.target,
+          r.estimate ?? "—",
+          r.previous ?? "—",
+          r.latest,
+          r.status,
+        ]),
+      ]),
+      "Analysis",
+    );
+    const brief = [
+      ["Project", project.brief.name],
+      ["Composition basis", "Dry blend; application water separate"],
+      [
+        "Cost ceiling (INR/kg)",
+        project.brief.constraints.cost
+          ? project.brief.constraints.currency &&
+            project.brief.constraints.currency !== "INR"
+            ? `${project.brief.constraints.currency} ${project.brief.constraints.cost} (needs re-entry in INR)`
+            : Number(project.brief.constraints.cost)
+          : "None",
+      ],
+      [],
+      ["Test", "Unit", "Method", "Condition", "Rule", "Target", "Upper", "Priority"],
       ...project.brief.targets.map((t) => [
         propertyFor(t.propertyId).name,
         t.unit,
@@ -43,94 +164,68 @@ export const reports: ReportService = {
         t.priority,
       ]),
     ];
-    XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(rows), "Brief");
+    XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(brief), "Brief");
     const materials = useWorkspace.getState().materials;
-    for (const trial of project.trials) {
-      const metrics = recipeMetrics(trial, materials);
-      const sheet = [
-        ["Trial", trial.name],
-        ["Revision", trial.version],
-        ["Basis", trial.basis],
-        ["Batch kg", trial.batchKg],
-        ["Application water % of dry blend", trial.water],
-        ["Estimated cost per kg", metrics.cost ?? "Incomplete"],
-        [],
-        ["Material", "Dry wt %", "Mass kg", "Price USD/kg", "Price date"],
-        ...Object.entries(trial.percentages).map(([id, pct]) => {
-          const m = (trial.materialsSnapshot || materials).find(
-            (m) => m.id === id,
-          );
-          return [
-            m?.name || id,
-            pct,
-            metrics.masses[id],
-            m?.price ?? "Missing",
-            m?.priceDate,
-          ];
-        }),
-      ];
+    for (const t of project.trials) {
+      const m = recipeMetrics(t, materials);
+      const tl = t.id === trial?.id ? lines : costBreakdown(t, materials);
       XLSX.utils.book_append_sheet(
         book,
-        XLSX.utils.aoa_to_sheet(sheet),
-        `Trial ${trial.version}-${trial.id.slice(-4)}`.slice(0, 31),
+        XLSX.utils.aoa_to_sheet([
+          ["Trial", t.name],
+          ["Revision", t.version],
+          ["Basis", t.basis],
+          ["Batch (kg, dry)", t.batchKg],
+          ["Application water (% of dry mass)", t.water],
+          [
+            "Material cost (INR per kg)",
+            m.cost === null ? "Incomplete" : toPaise(m.cost),
+          ],
+          [],
+          [
+            "Ingredient",
+            "Dry weight %",
+            "Mass per batch (kg)",
+            "Price (INR/kg)",
+            "Cost share (INR per kg of blend)",
+          ],
+          ...tl.map((l) => [
+            l.name,
+            l.percent,
+            Number(l.massKg.toFixed(3)),
+            l.price ?? "Missing",
+            l.perKg === null ? "Missing" : toPaise(l.perKg),
+          ]),
+          [
+            "Total",
+            Number(m.total.toFixed(2)),
+            t.batchKg,
+            "",
+            m.cost === null ? "Incomplete" : toPaise(m.cost),
+          ],
+        ]),
+        `Trial ${t.version}-${t.id.slice(-4)}`.slice(0, 31),
       );
     }
     XLSX.utils.book_append_sheet(
       book,
       XLSX.utils.json_to_sheet(
         project.results.map((r) => ({
-          Trial: r.trialId,
-          Property: propertyFor(r.propertyId).name,
+          Trial: short(project.trials.find((t) => t.id === r.trialId)?.name),
+          Test: propertyFor(r.propertyId).name,
           Unit: r.unit,
           Method: r.method,
           Condition: r.condition,
-          Specimen1: r.readings[0] ?? "",
-          Specimen2: r.readings[1] ?? "",
-          Specimen3: r.readings[2] ?? "",
+          "Specimen 1": r.readings[0] ?? "",
+          "Specimen 2": r.readings[1] ?? "",
+          "Specimen 3": r.readings[2] ?? "",
           Date: r.date,
           Operator: r.operator,
-          Reviewed: r.reviewed,
+          Reviewed: r.reviewed ? "Yes" : "No",
           Provenance: "Illustrative demo result",
         })),
       ),
       "Results",
-    );
-    const latest = project.trials.at(-1);
-    XLSX.utils.book_append_sheet(
-      book,
-      XLSX.utils.json_to_sheet(
-        project.brief.targets.map((target) => {
-          const assessment = evaluate(
-            target,
-            project.results.find(
-              (result) =>
-                result.trialId === latest?.id &&
-                result.propertyId === target.propertyId,
-            ),
-          );
-          return {
-            Project: project.brief.name,
-            BriefRevision: project.revisions.length,
-            Trial: latest?.name || "None",
-            Property: propertyFor(target.propertyId).name,
-            Unit: target.unit,
-            Method: target.method,
-            Condition: target.condition,
-            Operator: target.operator,
-            Target: target.value,
-            Upper: target.max,
-            PredictedEstimate:
-              project.pathways.find(
-                (pathway) => pathway.id === project.selectedPathway,
-              )?.predictions[target.propertyId] ?? "Insufficient data",
-            MeasuredMean: assessment.mean ?? "Pending",
-            Difference: assessment.difference ?? "",
-            Evaluation: assessment.status,
-            Label: "Illustrative demo · not scientific validation",
-          };
-        }),
-      ),
-      "Analysis",
     );
     XLSX.utils.book_append_sheet(
       book,
@@ -142,8 +237,8 @@ export const reports: ReportService = {
           Owner: source.owner,
           Date: source.date,
           Excerpt: source.excerpt,
-          EvidenceQuality: source.quality,
-          Excluded: source.excluded,
+          "Evidence quality": source.quality,
+          Excluded: source.excluded ? "Yes" : "No",
         })),
       ),
       "Sources",
@@ -153,10 +248,10 @@ export const reports: ReportService = {
       XLSX.utils.json_to_sheet(
         project.approvals.map((approval) => ({
           Action: approval.action,
-          Actor: approval.actor,
+          By: approval.actor,
           Date: approval.date,
-          RecipeRevision: approval.recipeId,
-          BriefVersion: approval.briefVersion || 1,
+          Recipe: short(project.trials.find((t) => t.id === approval.recipeId)?.name),
+          "Brief version": approval.briefVersion || 1,
           Notes: approval.note,
           Label: "Local demo approval only",
         })),
@@ -173,34 +268,74 @@ export const reports: ReportService = {
     if (!win) {
       useWorkspace
         .getState()
-        .notify("Allow pop-ups to open the print-to-PDF report.");
+        .notify(
+          "Your browser blocked the report window. Allow pop-ups for this site, then select “Download report” again.",
+        );
       return;
     }
-    const trial = project.trials.at(-1);
-    win.document.write(
-      `<html><head><title>Helix dossier — ${escape(project.brief.name)}</title><style>body{font:14px system-ui;max-width:1000px;margin:48px;color:#17191f}h1{font-size:28px}table{border-collapse:collapse;width:100%;margin:24px 0}td,th{text-align:left;border:1px solid #ddd;padding:10px}small{color:#666}@media print{button{display:none}}</style></head><body><small>HELIX / MATERIALS R&D</small><h1>${escape(project.brief.name)}</h1><p>Illustrative demo dossier · not scientific validation · R&D review required</p><p>Brief v${project.revisions.length} · Owner: ${escape(project.owner)} · Exported ${new Date().toLocaleDateString()}</p><p>${escape(project.brief.description)}</p><h2>Targets and latest trial results</h2><table><tr><th>Property</th><th>Target</th><th>Measured fixture</th><th>Status</th></tr>${project.brief.targets
-        .map((t) => {
-          const e = evaluate(
-            t,
-            project.results.find(
-              (r) => r.trialId === trial?.id && r.propertyId === t.propertyId,
-            ),
-          );
-          return `<tr><td>${escape(propertyFor(t.propertyId).name)}<br><small>${escape(t.method)} / ${escape(t.condition)}</small></td><td>${escape(t.operator)} ${escape(t.value)} ${escape(t.unit)}</td><td>${e.mean === null ? "Pending" : e.mean.toFixed(2)}</td><td>${e.status}</td></tr>`;
-        })
-        .join(
-          "",
-        )}</table><h2>Recipe revision ${trial?.version || "—"}</h2><p>Dry-blend basis; batch ${trial?.batchKg || "—"} kg; application water ${trial?.water || "—"}% of dry mass, separate.</p><table>${
-        trial
-          ? Object.entries(trial.percentages)
-              .map(
-                ([id, pct]) =>
-                  `<tr><td>${escape(useWorkspace.getState().materials.find((m) => m.id === id)?.name || id)}</td><td>${pct.toFixed(2)} wt %</td><td>${((trial.batchKg * pct) / 100).toFixed(3)} kg</td></tr>`,
-              )
-              .join("")
-          : ""
-      }</table><h2>Limitations and approval history</h2><p>All chemistry, estimates, and laboratory values are illustrative. Standard references are unverified; no compliance is claimed. Prices are fixture estimates dated September 2026.</p>${project.approvals.map((a) => `<p>${escape(a.action)} · ${escape(a.actor)} · ${escape(a.date)}<br>${escape(a.note)}</p>`).join("")}<h2>Sources</h2>${project.sources.map((s) => `<p>${escape(s.reference)} — ${escape(s.title)}<br>${escape(s.quality)}</p>`).join("")}<button onclick="window.print()">Print / Save as PDF</button></body></html>`,
-    );
+    const { trial, prev, outcome, metrics, lines, checks, rows } =
+      reportData(project);
+    const tone =
+      outcome.kind === "failing"
+        ? "#bf4557"
+        : outcome.kind === "incomplete" || outcome.kind === "no-trial"
+          ? "#906315"
+          : "#26765c";
+    const bar = (label: string, share: number, value: string) =>
+      `<div class="bar"><span>${escape(label)}</span><i style="width:${Math.max(1, share * 100).toFixed(1)}%"></i><b>${escape(value)}</b></div>`;
+    const costMax = Math.max(...lines.map((l) => l.perKg ?? 0), 0) || 1;
+    win.document.write(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Helix report — ${escape(project.brief.name)}</title>
+<style>
+body{font:14px/1.55 system-ui,sans-serif;max-width:960px;margin:40px auto;padding:0 24px;color:#17191f}
+h1{font-size:26px;margin:4px 0}h2{font-size:17px;margin:32px 0 10px}small,.muted{color:#5f6270}
+.outcome{border-left:6px solid ${tone};background:#f6f7f9;padding:18px 20px;border-radius:8px;margin:20px 0}
+.outcome h2{margin:0 0 6px;font-size:20px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card{border:1px solid #ddd;border-radius:8px;padding:12px}.card b{display:block;font-size:20px}
+table{border-collapse:collapse;width:100%;margin:8px 0}td,th{text-align:left;border-bottom:1px solid #ddd;padding:8px}th{color:#5f6270;font-weight:600}
+.num{text-align:right;font-variant-numeric:tabular-nums}.total td{font-weight:700;border-top:2px solid #999}
+.bar{display:grid;grid-template-columns:180px 1fr 150px;gap:10px;align-items:center;margin:6px 0}.bar i{display:block;height:12px;background:#6d4aff;border-radius:3px}.bar b{text-align:right;font-weight:500}
+ul{padding-left:18px}button{margin-top:24px;padding:10px 16px;font:inherit}
+@media print{button{display:none}body{margin:0}}
+</style></head><body>
+<small>HELIX · ILLUSTRATIVE DEMO · R&amp;D REVIEW REQUIRED</small>
+<h1>${escape(project.brief.name)}</h1>
+<p class="muted">Brief v${project.revisions.length} · Owner: ${escape(project.owner)} · Exported ${formatDate(Date.now())}</p>
+<div class="outcome"><small>Recommendation</small><h2>${escape(outcome.headline)}</h2><p>${escape(outcome.explanation)}</p></div>
+<div class="cards">
+<div class="card"><small>Targets met</small><b>${outcome.passCount} of ${outcome.total}</b></div>
+<div class="card"><small>Material cost</small><b>${metrics?.cost == null ? "Incomplete" : `${formatINR(metrics.cost)}/kg`}</b></div>
+<div class="card"><small>Recipe</small><b>${escape(short(trial?.name))}</b><small>Revision ${trial?.version ?? "—"}</small></div>
+<div class="card"><small>Batch</small><b>${trial ? `${formatNumber(trial.batchKg, trial.batchKg % 1 ? 1 : 0)} kg` : "—"}</b><small>${trial ? `+ ${formatNumber((trial.batchKg * trial.water) / 100)} kg water` : ""}</small></div>
+</div>
+<h2>Results against targets</h2>
+<table><thead><tr><th>Test</th><th>Unit</th><th class="num">Target</th><th class="num">Estimate</th>${prev ? `<th class="num">${escape(short(prev.name))} mean</th>` : ""}<th class="num">${escape(short(trial?.name))} mean</th><th>Result</th></tr></thead><tbody>
+${rows.map((r) => `<tr><td>${escape(r.name)}<br><small>${escape(r.priority)} · ${escape(r.condition)}</small></td><td>${escape(r.unit)}</td><td class="num">${escape(r.target)}</td><td class="num">${r.estimate ?? "—"}</td>${prev ? `<td class="num">${escape(r.previous ?? "—")}</td>` : ""}<td class="num"><b>${escape(r.latest)}</b></td><td>${escape(r.status)}</td></tr>`).join("")}
+</tbody></table>
+<p class="muted">Means of three specimen readings, shown to the precision of the readings. “—” means no data.</p>
+${
+  trial
+    ? `<h2>Where the cost comes from</h2>${metrics?.cost == null ? "<p>Incomplete: an ingredient has no ₹ price.</p>" : lines
+        .filter((l) => l.perKg !== null)
+        .sort((a, b) => b.perKg! - a.perKg!)
+        .map((l) => bar(l.name, l.perKg! / costMax, `${formatINR(l.perKg)}/kg`))
+        .join("")}
+<h2>Recipe and cost (${escape(short(trial.name))})</h2>
+<table><thead><tr><th>Ingredient</th><th class="num">Dry weight (%)</th><th class="num">Mass per batch (kg)</th><th class="num">Price (₹/kg)</th><th class="num">Cost share (₹/kg)</th></tr></thead><tbody>
+${lines.map((l) => `<tr><td>${escape(l.name)}</td><td class="num">${formatNumber(l.percent)}</td><td class="num">${formatNumber(l.massKg, 3)}</td><td class="num">${l.price === null ? "Missing" : formatINR(l.price)}</td><td class="num">${l.perKg === null ? "—" : formatINR(l.perKg)}</td></tr>`).join("")}
+<tr class="total"><td>Total dry blend</td><td class="num">${formatNumber(metrics?.total)}</td><td class="num">${formatNumber(trial.batchKg, 3)}</td><td></td><td class="num">${metrics?.cost == null ? "Incomplete" : formatINR(metrics.cost)}</td></tr>
+</tbody></table>`
+    : ""
+}
+<h2>Open checks before approval</h2>
+${checks.length ? `<ul>${checks.map((c) => `<li><b>${escape(c.message)}.</b> ${escape(c.fix)}</li>`).join("")}</ul>` : "<p>None. All checks pass.</p>"}
+<h2>Assumptions and limits</h2>
+<ul><li>${escape(conversionNote)}</li><li>Material cost per kg = Σ (price × dry weight % ÷ 100). Batch cost = cost per kg × batch kg.</li><li>A target is judged only when the unit, method and conditions match.</li><li>All chemistry, estimates and lab values are illustrative. Standard references are not verified; no compliance is claimed.</li></ul>
+<h2>Approval history</h2>
+${project.approvals.map((a) => `<p>${escape(a.action)} · ${escape(a.actor)} · ${formatDate(a.date)}<br><small>${escape(a.note)}</small></p>`).join("") || "<p>No review events yet.</p>"}
+<h2>Sources</h2>
+${project.sources.map((s) => `<p>${escape(s.reference)} — ${escape(s.title)}<br><small>${escape(s.quality)}${s.excluded ? " · excluded" : ""}</small></p>`).join("") || "<p>No sources.</p>"}
+<button onclick="window.print()">Print or save as PDF</button>
+</body></html>`);
     win.document.close();
   },
 };

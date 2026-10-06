@@ -10,8 +10,10 @@ import {
   Notice,
   SearchBox,
   s,
+  LiquidOrb,
 } from "../../components/ui";
 import { useWorkspace, uid } from "../../stores/workspace";
+import { conversionNote, formatDate, formatINR } from "../../lib/format";
 const columns = [
   "name",
   "function",
@@ -32,7 +34,8 @@ export function RawMaterials() {
     [rows, setRows] = useState<Record<string, unknown>[]>([]),
     [mapping, setMapping] = useState<Record<string, string>>({}),
     [preview, setPreview] = useState(false),
-    [modal, setModal] = useState(false);
+    [modal, setModal] = useState(false),
+    [isSaving, setIsSaving] = useState(false);
   const canEdit = ["Chemist", "Admin"].includes(state.user?.role || "");
   function template() {
     const book = XLSX.utils.book_new();
@@ -44,8 +47,8 @@ export function RawMaterials() {
           function: "Mineral filler",
           grade: "Fine",
           supplier: "Demo supplier",
-          price: 0.08,
-          currency: "USD",
+          price: 7.68,
+          currency: "INR",
           stock: "Available",
           min: 0,
           max: 30,
@@ -89,10 +92,10 @@ export function RawMaterials() {
     const min = Number(val("min")),
       max = Number(val("max"));
     const errs: string[] = [];
-    if (!val("name")) errs.push("Name required");
-    if (!val("supplier")) errs.push("Supplier required");
+    if (!val("name")) errs.push("Add a material name");
+    if (!val("supplier")) errs.push("Add a supplier");
     if (price !== null && (!Number.isFinite(price) || price < 0))
-      errs.push("Invalid price");
+      errs.push("Price must be a number of 0 or more");
     if (
       !Number.isFinite(min) ||
       !Number.isFinite(max) ||
@@ -100,8 +103,12 @@ export function RawMaterials() {
       max > 100 ||
       min > max
     )
-      errs.push("Invalid min/max");
-    if (val("currency") !== "USD") errs.push("Demo pricing supports USD only");
+      errs.push("Min and max must be between 0 and 100, with min ≤ max");
+    const currency = val("currency").toUpperCase().replace("₹", "INR");
+    if (currency !== "INR")
+      errs.push(
+        `Currency must be INR (found “${val("currency") || "blank"}”). Convert the price to ₹ and set currency to INR.`,
+      );
     return {
       row: i + 1,
       errors: errs,
@@ -112,7 +119,7 @@ export function RawMaterials() {
         grade: val("grade"),
         supplier: val("supplier"),
         price,
-        currency: val("currency"),
+        currency: currency === "INR" ? "INR" : val("currency"),
         stock: val("stock") || "Unknown",
         min,
         max,
@@ -125,20 +132,19 @@ export function RawMaterials() {
   });
   return (
     <>
+      {isSaving && <LiquidOrb />}
       <div className={s.pageHeader}>
         <div>
-          <div className={s.eyebrow} style={{ marginBottom: 10 }}>
-            THE BUILDING BLOCKS
-          </div>
           <h1>Raw materials</h1>
           <p>
-            A shared source of truth for grades, suppliers, prices, and limits.
+            Ingredients used in trial recipes, with supplier, price per kg and
+            allowed range.
           </p>
         </div>
         <div className={s.row}>
           <Button onClick={template}>
             <Download size={14} />
-            Import template
+            Download import template
           </Button>
           <label className={s.button} style={!canEdit ? { opacity: 0.45 } : {}}>
             <Upload size={14} />
@@ -165,7 +171,7 @@ export function RawMaterials() {
                 grade: "",
                 supplier: "",
                 price: null,
-                currency: "USD",
+                currency: "INR",
                 stock: "Available",
                 approved: false,
                 min: 0,
@@ -177,15 +183,14 @@ export function RawMaterials() {
             }
           >
             <Plus size={14} />
-            New material
+            Add material
           </Button>
         </div>
       </div>
       <div className={s.stack}>
         <Notice>
-          Illustrative master data. Prices are estimates in USD/kg, not live
-          supplier quotations. Missing prices produce incomplete costs. Import
-          uses the first worksheet of the documented .xlsx template.
+          {conversionNote} A missing price makes recipe costs “incomplete” — it
+          is never treated as ₹0. Imports read the first sheet of the template.
         </Notice>
         {error && (
           <p className={s.error} role="alert">
@@ -212,14 +217,14 @@ export function RawMaterials() {
           <table className={s.table}>
             <thead>
               <tr>
-                <th>Material / function</th>
-                <th>Grade</th>
-                <th>Supplier</th>
-                <th>Unit price</th>
-                <th>Stock</th>
-                <th>Approval / limits</th>
-                <th>SDS / alternatives</th>
-                <th />
+                <th scope="col">Material</th>
+                <th scope="col">Grade</th>
+                <th scope="col">Supplier</th>
+                <th scope="col" className={s.num}>Price (₹/kg)</th>
+                <th scope="col">Stock</th>
+                <th scope="col">Status and allowed range</th>
+                <th scope="col">Safety data</th>
+                <th scope="col"><span className={s.srOnly}>Edit</span></th>
               </tr>
             </thead>
             <tbody>
@@ -239,13 +244,15 @@ export function RawMaterials() {
                     </td>
                     <td>{m.grade}</td>
                     <td>{m.supplier}</td>
-                    <td>
+                    <td className={s.num}>
                       {m.price === null ? (
-                        <Badge tone="amber">Missing price</Badge>
+                        <Badge tone="amber">No price</Badge>
+                      ) : m.currency !== "INR" ? (
+                        <Badge tone="amber">{m.currency} — re-enter in ₹</Badge>
                       ) : (
-                        `${m.currency} ${m.price.toFixed(2)}/kg`
+                        formatINR(m.price)
                       )}
-                      <small>{m.priceDate}</small>
+                      <small>as of {formatDate(m.priceDate)}</small>
                     </td>
                     <td>
                       <Badge tone={m.stock === "Available" ? "green" : "amber"}>
@@ -254,10 +261,10 @@ export function RawMaterials() {
                     </td>
                     <td>
                       <Badge tone={m.approved ? "green" : "amber"}>
-                        {m.approved ? "Fixture-approved" : "Review needed"}
+                        {m.approved ? "Approved (demo)" : "Needs review"}
                       </Badge>
                       <small>
-                        {m.min}–{m.max} wt %
+                        Allowed {m.min}–{m.max}%
                       </small>
                     </td>
                     <td>
@@ -300,11 +307,19 @@ export function RawMaterials() {
               .includes(query.toLowerCase()) &&
             (stock === "All stock" || m.stock === stock),
         ) && (
-          <div className={s.empty}>No raw materials match these filters.</div>
+          <div className={s.empty}>
+            No materials match these filters.{" "}
+            <button className={s.textLink} onClick={() => { setQuery(""); setStock("All stock"); }}>
+              Clear filters
+            </button>
+          </div>
         )}
       </div>
       {edit && (
-        <Modal title="Material master record" onClose={() => setEdit(null)}>
+        <Modal
+          title={state.materials.some((m) => m.id === edit.id) ? `Edit ${edit.name}` : "Add material"}
+          onClose={() => setEdit(null)}
+        >
           <div className={s.formGrid}>
             {(
               [
@@ -316,7 +331,11 @@ export function RawMaterials() {
                 "priceDate",
               ] as const
             ).map((key) => (
-              <Field key={key} label={key[0].toUpperCase() + key.slice(1)}>
+              <Field
+                key={key}
+                label={{ name: "Name", function: "What it does", grade: "Grade", supplier: "Supplier", stock: "Stock", priceDate: "Price date" }[key]}
+                required={key === "name" || key === "supplier"}
+              >
                 <input
                   value={edit[key]}
                   type={key === "priceDate" ? "date" : "text"}
@@ -325,8 +344,9 @@ export function RawMaterials() {
               </Field>
             ))}
             <Field
-              label="Price · USD/kg"
-              hint="Leave empty to retain an incomplete-cost state."
+              label="Price"
+              unit="₹/kg"
+              hint="Excluding GST and delivery. Leave empty if unknown; costs will show as incomplete."
             >
               <input
                 type="number"
@@ -336,13 +356,14 @@ export function RawMaterials() {
                 onChange={(e) =>
                   setEdit({
                     ...edit,
+                    currency: "INR",
                     price:
                       e.target.value === "" ? null : Number(e.target.value),
                   })
                 }
               />
             </Field>
-            <Field label="Minimum · wt %">
+            <Field label="Minimum in a recipe" unit="dry wt %">
               <input
                 type="number"
                 value={edit.min}
@@ -351,7 +372,7 @@ export function RawMaterials() {
                 }
               />
             </Field>
-            <Field label="Maximum · wt %">
+            <Field label="Maximum in a recipe" unit="dry wt %">
               <input
                 type="number"
                 value={edit.max}
@@ -366,7 +387,7 @@ export function RawMaterials() {
                 onChange={(e) => setEdit({ ...edit, sds: e.target.value })}
               />
             </Field>
-            <Field label="Alternative material names · comma-separated">
+            <Field label="Alternative materials" hint="Separate names with commas.">
               <input
                 value={edit.alternatives.join(", ")}
                 onChange={(e) =>
@@ -395,27 +416,39 @@ export function RawMaterials() {
                   (edit.price !== null && edit.price < 0)
                 ) {
                   setError(
-                    "Name and supplier are required; valid limits are 0–100%, and price cannot be negative.",
+                    [
+                      !edit.name.trim() && "Add a name.",
+                      !edit.supplier.trim() && "Add a supplier.",
+                      (edit.min < 0 || edit.max > 100 || edit.min > edit.max) &&
+                        "Minimum and maximum must be 0–100%, with minimum no higher than maximum.",
+                      edit.price !== null && edit.price < 0 && "Price cannot be negative.",
+                    ]
+                      .filter(Boolean)
+                      .join(" "),
                   );
                   return;
                 }
-                state.setMaterials(
-                  state.materials.some((m) => m.id === edit.id)
-                    ? state.materials.map((m) => (m.id === edit.id ? edit : m))
-                    : [...state.materials, edit],
-                );
-                state.projects
-                  .filter((p) => p.trials.some((t) => edit.id in t.percentages))
-                  .forEach((p) =>
-                    state.updateProject(p.id, (x) => ({
-                      ...x,
-                      needsReview: true,
-                    })),
+                setIsSaving(true);
+                setTimeout(() => {
+                  state.setMaterials(
+                    state.materials.some((m) => m.id === edit.id)
+                      ? state.materials.map((m) => (m.id === edit.id ? edit : m))
+                      : [...state.materials, edit],
                   );
-                setEdit(null);
-                state.notify(
-                  "Material saved. Dependent cost analysis marked for review.",
-                );
+                  state.projects
+                    .filter((p) => p.trials.some((t) => edit.id in t.percentages))
+                    .forEach((p) =>
+                      state.updateProject(p.id, (x) => ({
+                        ...x,
+                        needsReview: true,
+                      })),
+                    );
+                  setEdit(null);
+                  state.notify(
+                    "Material saved. Dependent cost analysis marked for review.",
+                  );
+                  setIsSaving(false);
+                }, 2000);
               }}
             >
               Save material
@@ -461,7 +494,7 @@ export function RawMaterials() {
                     <tr>
                       <th>Row</th>
                       <th>Material</th>
-                      <th>Price USD/kg</th>
+                      <th className={s.num}>Price (₹/kg)</th>
                       <th>Validation</th>
                     </tr>
                   </thead>
@@ -470,7 +503,7 @@ export function RawMaterials() {
                       <tr key={r.row}>
                         <td>{r.row}</td>
                         <td>{r.material.name}</td>
-                        <td>{r.material.price ?? "Missing"}</td>
+                        <td className={s.num}>{r.material.price === null ? "Missing" : formatINR(r.material.price)}</td>
                         <td>
                           {r.errors.length ? (
                             <span className={s.error}>
@@ -493,14 +526,18 @@ export function RawMaterials() {
               variant="primary"
               disabled={!preview || parsed.some((r) => r.errors.length)}
               onClick={() => {
-                state.setMaterials([
-                  ...state.materials,
-                  ...parsed.map((r) => r.material),
-                ]);
-                setModal(false);
-                state.notify(
-                  `${parsed.length} material records imported for review.`,
-                );
+                setIsSaving(true);
+                setTimeout(() => {
+                  state.setMaterials([
+                    ...state.materials,
+                    ...parsed.map((r) => r.material),
+                  ]);
+                  setModal(false);
+                  state.notify(
+                    `${parsed.length} material records imported for review.`,
+                  );
+                  setIsSaving(false);
+                }, 2000);
               }}
             >
               Import validated rows

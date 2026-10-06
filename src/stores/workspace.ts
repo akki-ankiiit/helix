@@ -16,8 +16,8 @@ import {
   fixtureSources,
   initialBenchmarks,
   initialMaterials,
-  seedProjects,
 } from "../data/fixtures/workspace";
+import { migrateToInr } from "./migrations";
 const uid = () => crypto.randomUUID();
 export { uid };
 interface Workspace {
@@ -29,6 +29,8 @@ interface Workspace {
   materials: RawMaterial[];
   jobs: Job[];
   notification: string;
+  /** Optional destination for the notification action. */
+  notificationLink?: { to: string; label: string };
   login: () => void;
   logout: () => void;
   setMode: (mode: Mode) => void;
@@ -43,7 +45,7 @@ interface Workspace {
   startJob: (projectId: string, stage: string, fail?: boolean) => void;
   tick: () => void;
   jobAction: (id: string, action: "retry" | "cancel") => void;
-  notify: (text: string) => void;
+  notify: (text: string, link?: { to: string; label: string }) => void;
   reset: () => void;
 }
 export const useWorkspace = create<Workspace>()(
@@ -51,8 +53,8 @@ export const useWorkspace = create<Workspace>()(
     (set, get) => ({
       user: null,
       draft: blankBrief(),
-      draftStep: "mode",
-      projects: seedProjects(),
+      draftStep: "product",
+      projects: [],
       benchmarks: initialBenchmarks,
       materials: initialMaterials,
       jobs: [],
@@ -81,7 +83,7 @@ export const useWorkspace = create<Workspace>()(
       newDraft: () =>
         set({
           draft: blankBrief(),
-          draftStep: get().user?.mode ? "category" : "mode",
+          draftStep: "product",
         }),
       createProject: () => {
         const id = uid(),
@@ -127,7 +129,7 @@ export const useWorkspace = create<Workspace>()(
         set((s) => ({
           projects: [p, ...s.projects],
           draft: blankBrief(),
-          draftStep: "category",
+          draftStep: "product",
         }));
         return id;
       },
@@ -156,7 +158,7 @@ export const useWorkspace = create<Workspace>()(
             {
               id: uid(),
               projectId,
-              name: `${stage} · demo simulation`,
+              name: `${stage === "Literature" ? "Read · source search" : "Design · pathway search"} (demo)`,
               stage,
               status: "Queued",
               started: Date.now() + 500,
@@ -246,7 +248,18 @@ export const useWorkspace = create<Workspace>()(
                 ...p.activity,
               ],
             }));
-          get().notify(`${job.name} ${job.status.toLowerCase()}`);
+          get().notify(
+            job.status === "Completed"
+              ? `${job.name} finished.`
+              : `${job.name} failed. ${job.error || ""}`,
+            {
+              to:
+                job.status === "Completed"
+                  ? `/projects/${job.projectId}?stage=${job.stage}`
+                  : "/tasks",
+              label: job.status === "Completed" ? "View results" : "Open task queue",
+            },
+          );
         }
       },
       jobAction: (id, action) =>
@@ -265,14 +278,15 @@ export const useWorkspace = create<Workspace>()(
               : j,
           ),
         })),
-      notify: (notification) => set({ notification }),
+      notify: (notification, notificationLink) =>
+        set({ notification, notificationLink }),
       reset: () => {
         localStorage.removeItem("helix-demo-user-mode");
         set({
           user: null,
           draft: blankBrief(),
-          draftStep: "mode",
-          projects: seedProjects(),
+          draftStep: "product",
+          projects: [],
           benchmarks: structuredClone(initialBenchmarks),
           materials: structuredClone(initialMaterials),
           jobs: [],
@@ -282,6 +296,9 @@ export const useWorkspace = create<Workspace>()(
     }),
     {
       name: "helix-demo-workspace",
+      version: 1,
+      migrate: (persisted, version) =>
+        (version < 1 ? migrateToInr(persisted) : persisted) as Workspace,
       partialize: (s) => ({
         user: s.user,
         draft: s.draft,

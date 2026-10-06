@@ -1,14 +1,32 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Brand } from "../components/ui/Brand";
+import { s } from "../components/ui";
 
 export function NotFound() {
+  useEffect(() => {
+    document.title = "Page not found · Helix";
+  }, []);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', textAlign: 'center', padding: '2rem' }}>
-      <h1 style={{ fontSize: '4rem', margin: '0' }}>404</h1>
-      <p style={{ fontSize: '1.5rem', marginBottom: '2rem' }}>Oops! The page you're looking for doesn't exist.</p>
-      <Link to="/" style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-primary-600, #2563eb)', color: '#fff', textDecoration: 'none', borderRadius: '4px' }}>
-        Go Back Home
-      </Link>
-    </div>
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        padding: 24,
+      }}
+    >
+      <div className={s.panel} style={{ width: 460, maxWidth: "100%" }}>
+        <Brand />
+        <h1 style={{ marginTop: 28 }}>Page not found</h1>
+        <p className={s.muted} style={{ margin: "10px 0 24px" }}>
+          The link may be mistyped or out of date. Your projects are still
+          saved.
+        </p>
+        <Link className={`${s.button} ${s.primary}`} to="/">
+          Go to Helix
+        </Link>
+      </div>
+    </main>
   );
 }

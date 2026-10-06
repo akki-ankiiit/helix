@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ClipboardPaste, Paperclip, CheckCheck } from "lucide-react";
 import type { Project, SpecimenResult } from "../../domain/models";
-import { Badge, Button, Field, Modal, Notice, s } from "../../components/ui";
+import { Badge, Button, Empty, Field, Modal, Notice, Reason, s } from "../../components/ui";
+import { formatMeasured } from "../../lib/format";
 import { useWorkspace, uid } from "../../stores/workspace";
 import { mean, parseResultsPaste } from "../../domain/calculations";
 import { propertyFor } from "../../data/property-library";
@@ -71,19 +72,19 @@ export function Results({ project: p }: { project: Project }) {
   });
   return (
     <div className={s.stack}>
-      <Notice>
-        Measured-result entries are separate from pathway estimates. Seeded
-        measurements are illustrative demo fixtures, not actual laboratory data.
-        Blank readings remain pending, never zero.
-      </Notice>
+      <p className={s.muted} style={{ fontSize: 13 }}>
+        Type each reading as it comes off the test rig; it saves straight away.
+        Empty cells stay empty — they are never counted as zero. Seeded
+        readings in this demo are illustrative, not real lab data.
+      </p>
       {!p.trials.length ? (
-        <div className={s.empty}>
-          Create a trial to activate its specimen test plan.
-        </div>
+        <Empty title="No trial to record results for">
+          <p>Add a trial in Design · Trial plan first.</p>
+        </Empty>
       ) : (
         <>
           <div className={s.between}>
-            <Field label="Trial revision">
+            <Field label="Trial">
               <select
                 value={trialId}
                 onChange={(e) => setTrialId(e.target.value)}
@@ -110,6 +111,7 @@ export function Results({ project: p }: { project: Project }) {
               </Button>
               <Button
                 small
+                variant={canReview && hasComplete && !trial?.locked ? "primary" : "default"}
                 disabled={!canReview || !hasComplete || !!trial?.locked}
                 onClick={() => {
                   state.updateProject(p.id, (x) => ({
@@ -134,29 +136,34 @@ export function Results({ project: p }: { project: Project }) {
                 }}
               >
                 <CheckCheck size={14} />
-                Review results
+                Mark results reviewed
               </Button>
             </div>
           </div>
-          {(!canEnter || !canReview) && (
-            <p className={s.muted} style={{ fontSize: 11 }}>
+          {(trial?.locked || !canReview || !hasComplete || !canEnter) && (
+            <Reason>
               {trial?.locked
-                ? "This historical recipe and its result set are read-only."
-                : "Chemist / Technician: enter results. Reviewer / Admin: sign off complete results. Change demo role in Settings."}
-            </p>
+                ? "This trial is read-only because a newer revision exists or it was approved."
+                : !hasComplete
+                  ? "“Mark results reviewed” is available once every test has all three readings."
+                  : !canReview
+                    ? "Only a Reviewer or Admin can mark results reviewed. Change your demo role in Settings."
+                    : "Only a Chemist, Technician or Admin can enter readings."}
+            </Reason>
           )}
-          <div className={s.tableWrap}>
+          <p className={s.scrollHint}>Scroll sideways to see all specimens →</p>
+          <div className={s.tableWrap} tabIndex={0} role="region" aria-label="Specimen readings">
             <table className={s.table}>
               <thead>
                 <tr>
-                  <th>Property / test plan</th>
-                  <th>Unit</th>
-                  <th>Specimen 1</th>
-                  <th>Specimen 2</th>
-                  <th>Specimen 3</th>
-                  <th>Mean</th>
-                  <th>State</th>
-                  <th>Details</th>
+                  <th scope="col">Test</th>
+                  <th scope="col">Unit</th>
+                  <th scope="col" className={s.num}>Specimen 1</th>
+                  <th scope="col" className={s.num}>Specimen 2</th>
+                  <th scope="col" className={s.num}>Specimen 3</th>
+                  <th scope="col" className={s.num}>Mean</th>
+                  <th scope="col">Status</th>
+                  <th scope="col"><span className={s.srOnly}>Details</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -173,19 +180,15 @@ export function Results({ project: p }: { project: Project }) {
                         <small>{t.method}</small>
                         <small>
                           {plan?.ageDays
-                            ? `${plan.ageDays}-day test · due after conditioning`
-                            : "Fresh-state measurement"}{" "}
+                            ? `After ${plan.ageDays} days of curing`
+                            : "Fresh, straight after mixing"}{" "}
                           · {plan?.required ? "Required" : "Optional"}
-                        </small>
-                        <small>
-                          Due:{" "}
-                          {plan?.dueDate ||
-                            "R&D schedule confirmation required"}
+                          {plan?.dueDate ? ` · due ${plan.dueDate}` : ""}
                         </small>
                       </td>
                       <td>{t.unit}</td>
                       {[0, 1, 2].map((i) => (
-                        <td key={i}>
+                        <td key={i} className={s.num}>
                           <input
                             className={c.reading}
                             aria-label={`${propertyFor(t.propertyId).name} specimen ${i + 1}`}
@@ -208,8 +211,8 @@ export function Results({ project: p }: { project: Project }) {
                           />
                         </td>
                       ))}
-                      <td>
-                        <b>{average === null ? "—" : average.toFixed(3)}</b>
+                      <td className={s.num}>
+                        <b>{formatMeasured(average, r.readings)}</b>
                       </td>
                       <td>
                         <Badge
@@ -224,8 +227,8 @@ export function Results({ project: p }: { project: Project }) {
                           {r.reviewed
                             ? "Reviewed"
                             : r.readings.some((x) => x === null)
-                              ? "Pending"
-                              : "Entered · unreviewed"}
+                              ? `${r.readings.filter((x) => x === null).length} missing`
+                              : "Not reviewed"}
                         </Badge>
                       </td>
                       <td>
@@ -234,7 +237,8 @@ export function Results({ project: p }: { project: Project }) {
                           variant="ghost"
                           onClick={() => setDetail(t.propertyId)}
                         >
-                          Record details
+                          Details
+                          <span className={s.srOnly}> for {propertyFor(t.propertyId).name}</span>
                         </Button>
                       </td>
                     </tr>

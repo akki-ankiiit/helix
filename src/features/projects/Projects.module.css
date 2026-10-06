@@ -22,14 +22,17 @@
   border: 1px solid var(--border);
   border-radius: 11px;
   padding: 23px;
+  box-shadow: var(--shadow);
   transition:
     border-color 0.2s,
-    transform 0.2s;
+    transform 0.2s,
+    box-shadow 0.2s;
   min-width: 0;
 }
 .project:hover {
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 .projectIcon {
   width: 39px;
@@ -140,4 +143,17 @@
   font-size: 12px;
   color: var(--muted);
   margin-top: 5px;
+}
+.outcome {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--secondary);
+}
+.reportLink:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

@@ -20,7 +20,16 @@
   --red-soft: #fcecef;
   --blue: #376caa;
   --shadow: 0 8px 28px #23203905;
+  --shadow-lg: 0 12px 40px #2320391a;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
   --radius: 12px;
+  --chart-1: #6d4aff;
+  --chart-2: #2f8f83;
+  --chart-3: #c27a1a;
+  --chart-4: #3f6fb5;
+  --chart-5: #b4477a;
+  --chart-6: #7a7f8f;
+  --chart-muted: #b9b4d6;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -44,7 +53,15 @@
   --red: #f591a1;
   --red-soft: #372129;
   --blue: #91b9eb;
+  --chart-1: #aa97ff;
+  --chart-2: #6cc7b9;
+  --chart-3: #e9b366;
+  --chart-4: #8fb4ee;
+  --chart-5: #ec93bd;
+  --chart-6: #a7adbb;
+  --chart-muted: #5c5680;
   --shadow: 0 8px 28px #00000015;
+  --shadow-lg: 0 12px 40px #00000040;
 }
 * {
   box-sizing: border-box;
@@ -106,11 +123,16 @@ input:not([type="checkbox"]):not([type="radio"]),
 select {
   height: 40px;
 }
+input:not([type="checkbox"]):not([type="radio"]):hover:not(:focus),
+select:hover:not(:focus),
+textarea:hover:not(:focus) {
+  border-color: color-mix(in srgb, var(--muted) 40%, var(--border));
+}
 input:focus,
 textarea:focus,
 select:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: var(--focus-ring);
 }
 input::placeholder,
 textarea::placeholder {
@@ -131,7 +153,9 @@ textarea {
   min-height: 94px;
 }
 button:focus-visible,
-a:focus-visible {
+a:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
 }
@@ -146,6 +170,7 @@ h1 {
   font-size: 28px;
   font-weight: 600;
   line-height: 1.25;
+  letter-spacing: -0.015em;
 }
 h2 {
   font-size: 19px;
@@ -168,6 +193,27 @@ svg {
   background: var(--accent-soft);
   color: var(--accent);
 }
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 40%, transparent) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 34%, transparent);
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--muted) 52%, transparent);
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -176,4 +222,22 @@ svg {
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+/* Fallback for the LiquidOrb blob when WebGPU is unavailable. */
+.helix-css-blob {
+  width: 62%;
+  height: 62%;
+  border-radius: 46% 54% 58% 42% / 44% 46% 54% 56%;
+  background:
+    radial-gradient(circle at 30% 30%, #ffffffcc, transparent 32%),
+    radial-gradient(circle at 70% 65%, #ff7bd5, transparent 55%),
+    radial-gradient(circle at 35% 75%, #4cc9ff, transparent 55%),
+    linear-gradient(135deg, #6d4aff, #9a7bff);
+  filter: blur(1px) saturate(1.2);
+  box-shadow: 0 0 80px #8f6bff88;
+  animation: helix-blob 4.5s ease-in-out infinite;
+}
+@keyframes helix-blob {
+  0%, 100% { border-radius: 46% 54% 58% 42% / 44% 46% 54% 56%; transform: rotate(0deg) scale(1); }
+  50% { border-radius: 58% 42% 40% 60% / 56% 52% 48% 44%; transform: rotate(18deg) scale(1.05); }
 }
