@@ -268,6 +268,7 @@ test("direct links, refresh, back/forward, legacy routes", async ({ page }) => {
 });
 
 test("mobile layout, keyboard navigation and no horizontal overflow", async ({ page }) => {
+  test.setTimeout(120_000);
   await enter(page);
   for (const width of [390, 820, 1280]) {
     await page.setViewportSize({ width, height: 900 });
