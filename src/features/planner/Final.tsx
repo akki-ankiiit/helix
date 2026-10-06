@@ -25,6 +25,8 @@ import {
   CostTable,
   EvidenceLegend,
   FormulationTable,
+  FunctionPieChart,
+  IngredientBarChart,
   LiteratureTable,
   MixingDiagram,
   PerformanceChart,
@@ -199,44 +201,46 @@ export function CreateStep({ p, checks }: { p: Project; checks: Check[] }) {
         ))}
       </section>
 
-      <section aria-labelledby="approach">
+      <section aria-labelledby="approach" className={c.reportSection}>
         <h3 id="approach" className={c.sectionHead}>Selected approach: {sum.approach?.name}</h3>
         <p>{p.rationale}</p>
         <ApproachTable p={p} readOnly onSelect={() => undefined} />
       </section>
 
-      <section aria-labelledby="form">
+      <section aria-labelledby="form" className={c.reportSection}>
         <h3 id="form" className={c.sectionHead}>Formulation and batch quantities</h3>
-        <EvidenceLegend />
+        <div><EvidenceLegend /></div>
         <FormulationTable p={p} calc={calc} readOnly />
         <div className={c.chartGrid}>
           <CompositionChart p={p} calc={calc} />
           <MixingDiagram p={p} calc={calc} />
+          <FunctionPieChart p={p} calc={calc} />
+          <IngredientBarChart p={p} calc={calc} />
         </div>
       </section>
 
-      <section aria-labelledby="proc">
+      <section aria-labelledby="proc" className={c.reportSection}>
         <h3 id="proc" className={c.sectionHead}>Processing plan</h3>
         <ProcessTable p={p} readOnly />
         <ProcessFlow p={p} />
         <Timeline p={p} />
       </section>
 
-      <section aria-labelledby="tests">
+      <section aria-labelledby="tests" className={c.reportSection}>
         <h3 id="tests" className={c.sectionHead}>Performance testing</h3>
         <TestMatrix p={p} readOnly />
         <TrialsTable p={p} readOnly />
         <PerformanceChart p={p} />
       </section>
 
-      <section aria-labelledby="cost">
+      <section aria-labelledby="cost" className={c.reportSection}>
         <h3 id="cost" className={c.sectionHead}>Cost</h3>
         <CostTable p={p} calc={calc} readOnly />
       </section>
 
       <RecommendationList p={p} recs={recs} readOnly />
 
-      <section aria-labelledby="ag">
+      <section aria-labelledby="ag" className={c.reportSection}>
         <h3 id="ag" className={c.sectionHead}>Assumptions and gaps</h3>
         <div className={s.grid2}>
           <div>

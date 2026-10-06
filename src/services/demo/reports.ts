@@ -288,7 +288,7 @@ export const reports: ReportService = {
 <style>
 body{font:14px/1.55 system-ui,sans-serif;max-width:960px;margin:40px auto;padding:0 24px;color:#17191f}
 h1{font-size:26px;margin:4px 0}h2{font-size:17px;margin:32px 0 10px}small,.muted{color:#5f6270}
-.outcome{border-left:6px solid ${tone};background:#f6f7f9;padding:18px 20px;border-radius:8px;margin:20px 0}
+.outcome{border:1px solid ${tone};background:#f6f7f9;padding:18px 20px;border-radius:8px;margin:20px 0}
 .outcome h2{margin:0 0 6px;font-size:20px}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card{border:1px solid #ddd;border-radius:8px;padding:12px}.card b{display:block;font-size:20px}
 table{border-collapse:collapse;width:100%;margin:8px 0}td,th{text-align:left;border-bottom:1px solid #ddd;padding:8px}th{color:#5f6270;font-weight:600}

@@ -18,6 +18,15 @@ import {
   Sparkles,
   Menu,
   X,
+  BookOpen,
+  Package,
+  Layers,
+  ListTodo,
+  Sun,
+  Moon,
+  Monitor,
+  Bell,
+  ChevronDown
 } from "lucide-react";
 import { Brand } from "../ui/Brand";
 import { Badge, Breadcrumbs, Button, Modal, SearchBox, s } from "../ui";
@@ -29,10 +38,14 @@ import c from "./Shell.module.css";
 
 const groups = [
   {
-    label: "Work",
+    label: "WORKSPACE",
     items: [
       ["/projects", "Projects", FolderOpen],
+      ["/benchmarks", "Benchmarks", BookOpen],
+      ["/raw-materials", "Raw materials", Package],
+      ["/templates", "Templates", Layers],
       ["/reports", "Reports", FileChartColumn],
+      ["/task-queue", "Task queue", ListTodo],
     ],
   },
 ] as const;
@@ -255,6 +268,29 @@ export function Shell() {
             <Sparkles size={15} aria-hidden="true" />
             <span>Ask Helix</span>
           </Button>
+
+          <button className={c.roleSelect}>
+            <span>{state.user?.mode || "Scientist"}</span>
+            <ChevronDown size={15} />
+          </button>
+
+          <div className={c.themeToggle}>
+            <button aria-pressed="true" aria-label="Light mode"><Sun size={15} /></button>
+            <button aria-pressed="false" aria-label="Dark mode"><Moon size={15} /></button>
+            <button aria-pressed="false" aria-label="System theme"><Monitor size={15} /></button>
+          </div>
+
+          <button className={c.bellButton} aria-label="Notifications">
+            <Bell size={18} />
+          </button>
+
+          <div className={c.userPill}>
+            {(state.user?.name || "A M")
+              .split(" ")
+              .map((x) => x[0])
+              .join("")
+              .slice(0, 2)}
+          </div>
         </div>
       </header>
       <main className={c.main} id="main" tabIndex={-1}>

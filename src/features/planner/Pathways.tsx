@@ -23,6 +23,8 @@ import {
   EvidenceLegend,
   EvidenceTag,
   FormulationTable,
+  FunctionPieChart,
+  IngredientBarChart,
   MixingDiagram,
   PerformanceChart,
   ProcessFlow,
@@ -314,6 +316,8 @@ function Composition({ p, readOnly }: { p: Project; readOnly: boolean }) {
       <div className={c.chartGrid}>
         <CompositionChart p={p} calc={calc} />
         <MixingDiagram p={p} calc={calc} />
+        <FunctionPieChart p={p} calc={calc} />
+        <IngredientBarChart p={p} calc={calc} />
       </div>
       <section>
         <h4 className={c.groupHeading}>Cost estimate</h4>

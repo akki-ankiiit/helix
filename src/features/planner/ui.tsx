@@ -14,6 +14,8 @@ import {
   Field,
   Figure,
   Modal,
+  PieChart,
+  BarList,
   TargetChart,
   s,
 } from "../../components/ui";
@@ -1296,6 +1298,93 @@ function groupByFunction(p: Project, partId: string) {
   return [...map]
     .map(([name, share]) => ({ name, share }))
     .sort((a, b) => b.share - a.share);
+}
+
+export function FunctionPieChart({ p, calc }: { p: Project; calc: ProjectCalc }) {
+  return (
+    <Figure
+      title="Function share (Pie)"
+      takeaway="Visual breakdown of ingredient functions by weight."
+      values={{
+        headers: ["Component", "Function", "wt.%"],
+        rows: calc.parts.flatMap((part) =>
+          groupByFunction(p, part.partId).map((g) => [
+            part.name,
+            g.name,
+            fmt(g.share, 2),
+          ]),
+        ),
+      }}
+    >
+      <div className={c.chartParts}>
+        {calc.parts.map((part) => {
+          const groups = groupByFunction(p, part.partId);
+          return (
+            <div key={part.partId}>
+              {p.parts.length > 1 && (
+                <h4 className={c.chartPartTitle}>{part.name}</h4>
+              )}
+              {groups.length ? (
+                <PieChart
+                  label={`Pie composition of ${part.name}`}
+                  items={groups.map((g) => ({
+                    name: g.name,
+                    share: g.share,
+                    display: `${fmt(g.share, 2)}%`,
+                  }))}
+                />
+              ) : (
+                <p className={s.muted}>No amounts entered yet.</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Figure>
+  );
+}
+
+export function IngredientBarChart({ p, calc }: { p: Project; calc: ProjectCalc }) {
+  return (
+    <Figure
+      title="Ingredient weights"
+      takeaway="Comparison of individual ingredient weight percentages."
+      values={{
+        headers: ["Component", "Ingredient", "wt.%"],
+        rows: calc.parts.flatMap((part) => {
+          const ingredients = p.ingredients.filter((i) => i.partId === part.partId && i.wtPct !== null);
+          return ingredients.map((i) => [part.name, i.name, fmt(i.wtPct, 2)]);
+        }),
+      }}
+    >
+      <div className={c.chartParts}>
+        {calc.parts.map((part) => {
+          const ingredients = p.ingredients
+            .filter((i) => i.partId === part.partId && i.wtPct !== null)
+            .sort((a, b) => (b.wtPct || 0) - (a.wtPct || 0));
+          return (
+            <div key={part.partId}>
+              {p.parts.length > 1 && (
+                <h4 className={c.chartPartTitle}>{part.name}</h4>
+              )}
+              {ingredients.length ? (
+                <BarList
+                  items={ingredients.map((i) => ({
+                    label: i.name || "Unnamed",
+                    value: i.wtPct,
+                    display: `${fmt(i.wtPct, 2)}%`,
+                    tag: i.function,
+                  }))}
+                />
+              ) : (
+                <p className={s.muted}>No amounts entered yet.</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Figure>
+  );
 }
 
 export function ProcessFlow({ p }: { p: Project }) {

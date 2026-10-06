@@ -259,3 +259,85 @@ function Legend({
     </ul>
   );
 }
+
+export function PieChart({
+  items,
+  label,
+}: {
+  label: string;
+  items: { name: string; share: number; display: string }[];
+}) {
+  const total = items.reduce((a, b) => a + b.share, 0) || 1;
+  let cumulative = 0;
+
+  return (
+    <div className={c.breakdown}>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+        <svg
+          viewBox="-1.05 -1.05 2.1 2.1"
+          style={{ transform: "rotate(-90deg)", width: "100%", maxWidth: "220px", maxHeight: "220px", overflow: "visible" }}
+          aria-label={label}
+        >
+          {items.map((item, i) => {
+            const share = item.share / total;
+            if (share >= 0.999) {
+              return (
+                <circle
+                  key={item.name}
+                  cx="0"
+                  cy="0"
+                  r="1"
+                  fill={palette[i % palette.length]}
+                >
+                  <title>{`${item.name}: ${item.display}`}</title>
+                </circle>
+              );
+            }
+            const startAngle = cumulative * 2 * Math.PI;
+            const endAngle = (cumulative + share) * 2 * Math.PI;
+            cumulative += share;
+
+            const startX = Math.cos(startAngle);
+            const startY = Math.sin(startAngle);
+            const endX = Math.cos(endAngle);
+            const endY = Math.sin(endAngle);
+
+            const largeArcFlag = share > 0.5 ? 1 : 0;
+
+            const pathData = [
+              `M 0 0`,
+              `L ${startX} ${startY}`,
+              `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+              `Z`,
+            ].join(" ");
+
+            return (
+              <path
+                key={item.name}
+                d={pathData}
+                fill={palette[i % palette.length]}
+                stroke="var(--surface)"
+                strokeWidth="0.02"
+              >
+                <title>{`${item.name}: ${item.display}`}</title>
+              </path>
+            );
+          })}
+        </svg>
+      </div>
+      <ul className={c.legendList}>
+        {items.map((item, i) => (
+          <li key={item.name}>
+            <span
+              className={c.swatch}
+              style={{ background: palette[i % palette.length] }}
+              aria-hidden="true"
+            />
+            <span>{item.name}</span>
+            <b>{item.display}</b>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

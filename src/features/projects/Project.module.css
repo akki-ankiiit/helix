@@ -50,14 +50,14 @@
 .outcome_approved,
 .outcome_ready,
 .outcome_review {
-  border-left: 4px solid var(--green);
+  border-color: var(--green);
 }
 .outcome_failing {
-  border-left: 4px solid var(--red);
+  border-color: var(--red);
 }
 .outcome_incomplete,
 .outcome_no-trial {
-  border-left: 4px solid var(--amber);
+  border-color: var(--amber);
 }
 .stepBody {
   margin-top: 16px;
